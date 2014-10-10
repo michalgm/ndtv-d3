@@ -1,0 +1,86 @@
+
+TODO list for feature implementation
+
+below are a list of the various params for the plot.network.default  R plotting function.  In R, you can display the manpage to give their formal definitions with
+
+?plot.network.default
+
+and print the function code with 
+plot.network.default
+
+To plot a network:
+
+library(ndtv)
+data(short.stergm.sim)
+plot(short.stergm.sim,vertex.col='blue',vertex.cex=2)
+
+
+prioraties for implementation:
+-------
+high priority
+-----
+
+label =   IMPLEMENTED  
+coord = IGNORE
+jitter = IGNORE
+usearrows = TRUE,  If the graph is directed, draw an arrowhead on the "head" side
+displaylabels = !missing(label), 
+xlab = NULL,  IMPLEMENTED
+edge.col = 1, 
+label.col = 1, 
+vertex.col = 2, 
+vertex.sides = 50, 
+vertex.rot = 0, 
+vertex.lwd=1,
+label.pos = 0,  the js code will ignore this, but I need to add a properity that gives the actual coordinates
+label.border = 1,
+vertex.border = 1, 
+edge.lwd = 0, 
+edge.label = NULL, 
+
+
+bg=   background color  (this is actually value from somewhere else, but we will need it)
+main =  A 'main' headline, to be drawn in a bold font as a caption over the image (like xlab is below)
+
+-------------------
+Lower priority:
+---------
+ylab = NULL,   Will need
+
+xlim = NULL,   for zooming
+ylim = NULL,
+
+displayisolates = TRUE,   if FALSE, hide all the vertices with no edges
+interactive = FALSE,   # for this we will implement something entirely different
+
+pad = 0.2,    i'm not sure what this does
+label.pad = 0.5,
+
+boxed.labels = FALSE, 
+label.bg = "white", 
+arrowhead.cex = 1, 
+label.cex = 1, 
+loop.cex = 1, 
+vertex.cex = 1,
+edge.lty = 1, 
+label.lty = NULL, 
+vertex.lty = 1,
+edge.lwd = 0, 
+edge.label = NULL, 
+edge.label.cex = 1,
+edge.label.col = 1, 
+label.lwd = par("lwd"), 
+edge.len = 0.5, 
+edge.curve = 0.1, 
+edge.steps = 50, 
+loop.steps = 20, 
+object.scale = 0.01, 
+uselen = FALSE, 
+usecurve = FALSE,
+suppress.axes = TRUE, 
+vertices.last = TRUE, new = TRUE, 
+
+------
+low priority
+-------
+family  =  font family name (for the entire plot)
