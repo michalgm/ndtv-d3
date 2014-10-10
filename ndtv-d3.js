@@ -102,7 +102,6 @@ var drawCircles = function(duration) {
     .delay(duration)
     .attr({
       opacity: 1,
-      stroke: 'grey',
     })
 
   lines.exit()
@@ -119,8 +118,6 @@ var drawCircles = function(duration) {
     .attr("cx", function(d) { return xScale(d["animation.x.active"][0][state]); })
     .attr("cy", function(d) { return yScale(d["animation.y.active"][0][state]); })
     .attr("r", 10) //function(d) { return d.z[state]; })
-    .attr("fill", 'green') //function(d) { return d.color; })
-    .attr('stroke', 'black')
     .attr('opacity', 0)
   circles.transition()
     .delay(duration/2)

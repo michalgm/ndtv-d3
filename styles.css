@@ -1,6 +1,17 @@
 .label {
   font-family: 'Ubuntu'
 }
+
+.node {
+  stroke-width: 1px;
+  fill: red;
+  stroke: black;
+}
+
+.edge {
+  stroke: black;
+}
+
 #controls { 
   margin: 0px 20px;
 }
