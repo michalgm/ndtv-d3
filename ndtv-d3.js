@@ -1,29 +1,37 @@
-var nodes, width, height, container, maxRadius, xScale, yScale, zScale, currTime, edges, maxTime, slider, animate, prevTime;
+var nodes, width, height, container, maxRadius, xScale, yScale, zScale, currTime, edges, maxTime, slider, animate, prevTime, baseNodeSize;
 var defaultDuration = 800;
 var margin = {x: 20, y: 10};
+var textPadding = 12;
 
 var resize = function() {
   init();
   var lines = container.select('#edges').selectAll('line').data(edgeFilter(), function(e) { return e.inl[0]+'_'+e.outl[0]})
   .attr({
-    x1: function(d, i) { return xScale(nodes[d.inl[0]-1]["animation.x.active"][0][currTime]); },
-    y1: function(d, i) { return yScale(nodes[d.inl[0]-1]["animation.y.active"][0][currTime]); },
-    x2: function(d, i) { return xScale(nodes[d.outl[0]-1]["animation.x.active"][0][currTime]); },
-    y2: function(d, i) { return yScale(nodes[d.outl[0]-1]["animation.y.active"][0][currTime]); },
+    x1: function(d, i) { return xScale(getActive('coord', currTime)[d.inl[0]-1][0]); },
+    y1: function(d, i) { return yScale(getActive('coord', currTime)[d.inl[0]-1][1]); },
+    x2: function(d, i) { return xScale(getActive('coord', currTime)[d.outl[0]-1][0]); },
+    y2: function(d, i) { return yScale(getActive('coord', currTime)[d.outl[0]-1][1]); },
   });
 
   var circles = container.select('#nodes').selectAll('circle').data(nodes)
-    .attr("cx", function(d) { return xScale(d["animation.x.active"][0][currTime]); })
-    .attr("cy", function(d) { return yScale(d["animation.y.active"][0][currTime]); })
+  .attr({
+    cx: function(d, i) { return xScale(getActive('coord', currTime)[i][0]); },
+    cy: function(d, i) { return yScale(getActive('coord', currTime)[i][1]); },
+    r: function(d, i) { return getActive('vertex.cex', currTime)[i] * baseNodeSize; },
+  });
 
   var labels = container.select('#labels').selectAll('text').data(nodes)
-    .attr("x", function(d) { return xScale(d["animation.x.active"][0][currTime])+textPadding; })
-    .attr("y", function(d) { return yScale(d["animation.y.active"][0][currTime])+textPadding; })
+    .attr({
+      x: function(d, i) { return xScale(getActive('coord', currTime)[i][0])+textPadding; },
+      y: function(d, i) { return yScale(getActive('coord', currTime)[i][1]); },
+    })
 }
 
 var init = function() {
   width = $(window).width() - (margin.x*2);
   height = $(window).height() - (margin.y*2) - 110;
+
+  baseNodeSize = width > height ? height /100 : width/100;
 
   d3.selectAll('#graph svg, #background')
     .attr({
@@ -89,7 +97,6 @@ var edgeFilter = function(e) {
 }
 
 var drawCircles = function(duration) {
-  var textPadding = 12;
 
   $('#key').html(getActive('xlab', currTime)[0])
 
@@ -137,7 +144,7 @@ var drawCircles = function(duration) {
         class: 'node',
         cx: function(d, i) { return xScale(getActive('coord', currTime)[i][0]); },
         cy: function(d, i) { return yScale(getActive('coord', currTime)[i][1]); },
-        r: 10,
+        r: function(d, i) { return getActive('vertex.cex', currTime)[i] * baseNodeSize; },
         opacity: 0,
       })
       .transition()
@@ -153,6 +160,7 @@ var drawCircles = function(duration) {
       .attr({
         cx: function(d, i) { return xScale(getActive('coord', currTime)[i][0]); },
         cy: function(d, i) { return yScale(getActive('coord', currTime)[i][1]); },
+        r: function(d, i) { return getActive('vertex.cex', currTime)[i] * baseNodeSize; },
       })
       .style('fill', function(d, i) {
         return getActive('vertex.col', currTime)[i];
