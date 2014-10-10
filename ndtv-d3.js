@@ -1,10 +1,13 @@
-var nodes, width, height, container, maxRadius, xScale, yScale, zScale, currTime, edges, maxTime, slider, animate, prevTime, baseNodeSize;
+var nodes, width, height, container, xScale, yScale, zScale, edges, maxTime, slider, animate, baseNodeSize;
+var currTime = 0;
+var prevTime = 0;
+
 var defaultDuration = 800;
 var margin = {x: 20, y: 10};
 var textPadding = 12;
 
 var resize = function() {
-  init();
+  initScales();
   var lines = container.select('#edges').selectAll('line').data(edgeFilter(), function(e) { return e.inl[0]+'_'+e.outl[0]})
   .attr({
     x1: function(d, i) { return xScale(getActive('coord', currTime)[d.inl[0]-1][0]); },
@@ -27,7 +30,7 @@ var resize = function() {
     })
 }
 
-var init = function() {
+var initScales = function() {
   width = $(window).width() - (margin.x*2);
   height = $(window).height() - (margin.y*2) - 110;
 
@@ -51,8 +54,8 @@ var init = function() {
     .range([height, 0]);
 }
 
-var updateCount = function() {
-  init();
+var loadData = function() {
+  initScales();
   nodes = graph.val;
   edges = graph.mel;
   maxTime = 24;
@@ -69,7 +72,7 @@ var updateCount = function() {
     })
   d3.select('#slider').call(slider);
 
-  drawCircles(defaultDuration);
+  drawGraph(defaultDuration);
 }
 
 var getActive = function(prop, time) {
@@ -96,7 +99,7 @@ var edgeFilter = function(e) {
   });
 }
 
-var drawCircles = function(duration) {
+var drawGraph = function(duration) {
 
   $('#key').html(getActive('xlab', currTime)[0])
 
@@ -211,7 +214,7 @@ var animateGraph = function(time, endTime, duration, noUpdate) {
   prevTime = currTime;
   currTime = time;
   // console.log(currTime + ' '+time+' '+endTime+ ' '+nextTime)
-  drawCircles(duration);
+  drawGraph(duration);
   if (time != endTime) {
     animate = setTimeout(function(){
       animateGraph(nextTime, endTime, duration, noUpdate);
@@ -223,38 +226,34 @@ var endAnimation = function(){
   clearTimeout(animate);
 }
 
-var zoom = d3.behavior.zoom()
-    .scaleExtent([1, 10])
-    .on("zoom", zoomed);
+var SVGSetup = function() {
+  var zoom = d3.behavior.zoom()
+      .scaleExtent([1, 10])
+      .on("zoom", zoomed);
 
-var drag = d3.behavior.drag()
-    .origin(function(d) { return d; })
-    .on("dragstart", dragstarted)
-    .on("drag", dragged)
-    .on("dragend", dragended);
+  var drag = d3.behavior.drag()
+      .origin(function(d) { return d; })
+      .on("dragstart", dragstarted)
+      .on("drag", dragged)
+      .on("dragend", dragended);
 
-function zoomed() {
-  container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
-}
+  function zoomed() {
+    container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+  }
 
-function dragstarted(d) {
-  d3.event.sourceEvent.stopPropagation();
-  d3.select(this).classed("dragging", true);
-}
+  function dragstarted(d) {
+    d3.event.sourceEvent.stopPropagation();
+    d3.select(this).classed("dragging", true);
+  }
 
-function dragged(d) {
-  d3.select(this).attr("cx", d.x = d3.event.x).attr("cy", d.y = d3.event.y);
-}
+  function dragged(d) {
+    d3.select(this).attr("cx", d.x = d3.event.x).attr("cy", d.y = d3.event.y);
+  }
 
-function dragended(d) {
-  d3.select(this).classed("dragging", false);
-}
+  function dragended(d) {
+    d3.select(this).classed("dragging", false);
+  }
 
-$(function() {
-  minRadius = 15;
-  maxRadius = 2;
-  currTime = 0;
-  prevTime = 0;
   $(window).resize(resize);
   var svg = d3.select("#graph")
     .append("svg:svg")
@@ -271,6 +270,9 @@ $(function() {
   container.append('g').attr('id', 'edges');
   container.append('g').attr('id', 'nodes');
   container.append('g').attr('id', 'labels');
+}
 
-  updateCount();
+$(function() {
+  SVGSetup();
+  loadData();
 })
