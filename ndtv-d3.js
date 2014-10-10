@@ -1,5 +1,6 @@
 var nodes, width, height, container, maxRadius, xScale, yScale, zScale, currTime, edges, maxTime, slider, animate, prevTime;
 var defaultDuration = 800;
+var margin = {x: 20, y: 10};
 
 var resize = function() {
   init();
@@ -21,23 +22,25 @@ var resize = function() {
 }
 
 var init = function() {
-  width = $(window).width()-30;
-  height = $(window).height()-80;
+  width = $(window).width() - (margin.x*2);
+  height = $(window).height() - (margin.y*2) - 110;
 
-  d3.selectAll('#circles svg, #background')
+  d3.selectAll('#graph svg, #background')
     .attr({
-      height: height,
-      width: width
+      width: width + margin.x * 2,
+      height: height + margin.y * 2
     })
 
-  yScale = d3.scale.linear()
-    .domain([graph.gal['xlim.active'][0][0].xlim[0],graph.gal['xlim.active'][0][0].xlim[1]])
-    .range([maxRadius,height-maxRadius]);
+  d3.select('#container')
+    .attr("transform", "translate(" + margin.x + "," + margin.y + ")");
 
   xScale = d3.scale.linear()
+    .domain([graph.gal['xlim.active'][0][0].xlim[0],graph.gal['xlim.active'][0][0].xlim[1]])
+    .range([0, width]);
+
+  yScale = d3.scale.linear()
     .domain([graph.gal['ylim.active'][0][0].ylim[0],graph.gal['ylim.active'][0][0].ylim[1]])
-    .domain([-4,4])
-    .range([maxRadius,width-maxRadius]);
+    .range([height, 0]);
 }
 
 var updateCount = function() {
@@ -47,16 +50,29 @@ var updateCount = function() {
   maxTime = 24;
 
   slider = d3.slider().axis(true).step(1);
-  slider.max(maxTime)
+  slider.min(1)
+  slider.max(maxTime+1)
   slider.animate(defaultDuration)
+  slider.value(1)
   slider.on('slide', function(ext, value) {
       endAnimation();
-      var duration = 200/Math.abs(currTime-value);
-      animateGraph(currTime, value, duration, true);
+      var duration = 200/Math.abs(currTime-value-1);
+      animateGraph(currTime, value-1, duration, true);
     })
   d3.select('#slider').call(slider);
 
   drawCircles(defaultDuration);
+}
+
+var getActive = function(prop, time) {
+  var value;
+  var props = graph.gal[prop+'.active'];
+  $.each(props[1], function(i, times){
+    if (times[0] <= time && times[1] > time) {
+      value = props[0][i][prop];
+    }
+  })
+  return value;
 }
 
 var edgeFilter = function(e) {
@@ -75,15 +91,17 @@ var edgeFilter = function(e) {
 var drawCircles = function(duration) {
   var textPadding = 12;
 
+  $('#key').html(getActive('xlab', currTime)[0])
+
   var lines = container.select('#edges').selectAll('line').data(edgeFilter(), function(e) { return e.inl[0]+'_'+e.outl[0]})
 
     lines.enter().append('line')
       .attr('class', 'edge')
       .attr({
-        x1: function(d, i) { return xScale(nodes[d.inl[0]-1]["animation.x.active"][0][prevTime]); },
-        y1: function(d, i) { return yScale(nodes[d.inl[0]-1]["animation.y.active"][0][prevTime]); },
-        x2: function(d, i) { return xScale(nodes[d.outl[0]-1]["animation.x.active"][0][prevTime]); },
-        y2: function(d, i) { return yScale(nodes[d.outl[0]-1]["animation.y.active"][0][prevTime]); },
+        x1: function(d, i) { return xScale(getActive('coord', prevTime)[d.inl[0]-1][0]); },
+        y1: function(d, i) { return yScale(getActive('coord', prevTime)[d.inl[0]-1][1]); },
+        x2: function(d, i) { return xScale(getActive('coord', prevTime)[d.outl[0]-1][0]); },
+        y2: function(d, i) { return yScale(getActive('coord', prevTime)[d.outl[0]-1][1]); },
         opacity: 0
       })
       .style('stroke', 'green')
@@ -99,10 +117,10 @@ var drawCircles = function(duration) {
         .delay(duration/2)
         .duration(duration/2)
         .attr({
-          x1: function(d, i) { return xScale(nodes[d.inl[0]-1]["animation.x.active"][0][currTime]); },
-          y1: function(d, i) { return yScale(nodes[d.inl[0]-1]["animation.y.active"][0][currTime]); },
-          x2: function(d, i) { return xScale(nodes[d.outl[0]-1]["animation.x.active"][0][currTime]); },
-          y2: function(d, i) { return yScale(nodes[d.outl[0]-1]["animation.y.active"][0][currTime]); },
+          x1: function(d, i) { return xScale(getActive('coord', currTime)[d.inl[0]-1][0]); },
+          y1: function(d, i) { return yScale(getActive('coord', currTime)[d.inl[0]-1][1]); },
+          x2: function(d, i) { return xScale(getActive('coord', currTime)[d.outl[0]-1][0]); },
+          y2: function(d, i) { return yScale(getActive('coord', currTime)[d.outl[0]-1][1]); },
         })
         .style('stroke', 'black')
 
@@ -115,53 +133,76 @@ var drawCircles = function(duration) {
 
   var circles = container.select('#nodes').selectAll('circle').data(nodes);
     circles.enter().append('circle')
-      .attr('class', 'node')
-      .attr("cx", function(d) { return xScale(d["animation.x.active"][0][currTime]); })
-      .attr("cy", function(d) { return yScale(d["animation.y.active"][0][currTime]); })
-      .attr("r", 10) //function(d) { return d.z[state]; })
-      .attr('opacity', 0)
+      .attr({
+        class: 'node',
+        cx: function(d, i) { return xScale(getActive('coord', currTime)[i][0]); },
+        cy: function(d, i) { return yScale(getActive('coord', currTime)[i][1]); },
+        r: 10,
+        opacity: 0,
+      })
       .transition()
       .duration(duration/2)
       .attr('opacity', 1)
+      .style('fill', function(d, i) {
+        return getActive('vertex.col', currTime)[i];
+      })
 
     circles.transition()
       .delay(duration/2)
       .duration(duration/2)
-      .attr("cx", function(d) { return xScale(d["animation.x.active"][0][currTime]); })
-      .attr("cy", function(d) { return yScale(d["animation.y.active"][0][currTime]); })
-  //          .attr("r", function(d) { return d.z[currTime]; })
-    circles.exit().remove();
+      .attr({
+        cx: function(d, i) { return xScale(getActive('coord', currTime)[i][0]); },
+        cy: function(d, i) { return yScale(getActive('coord', currTime)[i][1]); },
+      })
+      .style('fill', function(d, i) {
+        return getActive('vertex.col', currTime)[i];
+      })
+
+    circles.exit()
+      .transition()
+      .duration(duration*.4)
+      .attr('opacity', 0)
+      .remove();
 
   var labels = container.select('#labels').selectAll('text').data(nodes);
     labels.enter().append('text')
-      .attr('class', 'label')
-      .attr("x", function(d) { return xScale(d["animation.x.active"][0][currTime])+textPadding; })
-      .attr("y", function(d) { return yScale(d["animation.y.active"][0][currTime]); })
-      .text(function(d) { return d['vertex.names'][0]; })
-      .attr('opacity', 0) 
+      .attr({
+        class: 'label',
+        x: function(d, i) { return xScale(getActive('coord', currTime)[i][0])+textPadding; },
+        y: function(d, i) { return yScale(getActive('coord', currTime)[i][1]); },
+        opacity: 0
+      })
+      .text(function(d, i) { return getActive('label', currTime)[i]; })
+
     labels.transition()
       .delay(duration/2)
       .duration(duration/2)
-      .attr("x", function(d) { return xScale(d["animation.x.active"][0][currTime])+textPadding; })
-      .attr("y", function(d) { return yScale(d["animation.y.active"][0][currTime]); })
-      .attr('opacity', 1)
+      .attr({
+        x: function(d, i) { return xScale(getActive('coord', currTime)[i][0])+textPadding; },
+        y: function(d, i) { return yScale(getActive('coord', currTime)[i][1]); },
+        opacity: 1
+      })
+      .text(function(d, i) { return getActive('label', currTime)[i]; })
+
     labels.exit().remove();
 
 }
 
 var animateGraph = function(time, endTime, duration, noUpdate) {
+  if (endTime !== undefined && ! $.isNumeric(endTime)) { return; }
+  if (time > maxTime) { return; }
+  // console.log(currTime + ' '+time+' '+endTime+ ' '+nextTime)
 
   if(! noUpdate) {
-    slider.value(time);
+    slider.value(time+1);
   }
   duration = duration === undefined ? defaultDuration : duration;
-  if (endTime !== undefined && ! $.isNumeric(endTime)) { return; }
   endTime = endTime === undefined ? maxTime : endTime;
   var nextTime = endTime > time ? time +1 : time -1;
   //console.log(nextTime)
   prevTime = currTime;
   currTime = time;
-  //console.log(currTime + ' '+time+' '+endTime+ ' '+nextTime)
+  // console.log(currTime + ' '+time+' '+endTime+ ' '+nextTime)
   drawCircles(duration);
   if (time != endTime) {
     animate = setTimeout(function(){
@@ -207,10 +248,9 @@ $(function() {
   currTime = 0;
   prevTime = 0;
   $(window).resize(resize);
-  var svg = d3.select("#circles")
+  var svg = d3.select("#graph")
     .append("svg:svg")
     .append('g')
-    .attr("transform", "translate(" + 10 + "," + 10 + ")")
     .call(zoom)
 
   var rect = svg.append("rect")
@@ -225,11 +265,4 @@ $(function() {
   container.append('g').attr('id', 'labels');
 
   updateCount();
-/*        $('#circles').on('click', function() { 
-    if (currTime != maxTime) { 
-      animateGraph(currTime); 
-    } else {
-      animateGraph(currTime, 0); 
-    }
-  })
-*/      })
+})

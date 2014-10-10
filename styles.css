@@ -1,3 +1,9 @@
+body, html { 
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
 .label {
   font-family: 'Ubuntu'
 }
@@ -10,6 +16,14 @@
 
 .edge {
   stroke: black;
+}
+#graph { 
+  overflow: hidden;
+}
+
+#key {
+  padding: 10px;
+  text-align: center;
 }
 
 #controls { 
