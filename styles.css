@@ -1,0 +1,13 @@
+.label {
+  font-family: 'Ubuntu'
+}
+#controls { 
+  margin: 0px 20px;
+}
+#controls i {
+  margin: 0px 5px;
+  cursor: pointer;
+}
+#controls i:hover {
+  color: blue;
+}
