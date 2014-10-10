@@ -15,16 +15,16 @@
     <div id='controls'>
       <div>
         <div style='float: right; width: 10%; background: #ccc; border-radius: 5px; padding: 10px'>
-          <i onclick='animateGraph(state-1, state-1)' class="fa fa-step-backward fa-2x"></i>
-          <i onclick='animateGraph(state-1, 0)' class="fa fa-play fa-flip-horizontal fa-2x"></i>
+          <i onclick='animateGraph(currTime-1, currTime-1)' class="fa fa-step-backward fa-2x"></i>
+          <i onclick='animateGraph(currTime-1, 0)' class="fa fa-play fa-flip-horizontal fa-2x"></i>
           <i onclick='endAnimation()' class="fa fa-pause fa-2x"></i>
-          <i onclick='animateGraph(state+1)'class="fa fa-play fa-2x"></i>
-          <i onclick='animateGraph(state+1, state+1)'class="fa fa-step-forward fa-2x"></i>
+          <i onclick='animateGraph(currTime+1)'class="fa fa-play fa-2x"></i>
+          <i onclick='animateGraph(currTime+1, currTime+1)'class="fa fa-step-forward fa-2x"></i>
         </div>
         <div style='width: 85%;' id='slider'></div>
 
         <!--<br/>
-        Set time <input onkeyup='animateGraph(state, $(this).val())' id='set-time'/>-->
+        Set time <input onkeyup='animateGraph(currTime, $(this).val())' id='set-time'/>-->
       </div>
     </div>
   </body>

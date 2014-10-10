@@ -1,23 +1,23 @@
-var nodes, width, height, container, maxRadius, xScale, yScale, zScale, state, edges, maxTime, slider, animate;
-var defaultDuration = 1000;
+var nodes, width, height, container, maxRadius, xScale, yScale, zScale, currTime, edges, maxTime, slider, animate, prevTime;
+var defaultDuration = 800;
 
 var resize = function() {
   init();
   var lines = container.select('#edges').selectAll('line').data(edgeFilter(), function(e) { return e.inl[0]+'_'+e.outl[0]})
   .attr({
-    x1: function(d, i) { return xScale(nodes[d.inl[0]-1]["animation.x.active"][0][state]); },
-    y1: function(d, i) { return yScale(nodes[d.inl[0]-1]["animation.y.active"][0][state]); },
-    x2: function(d, i) { return xScale(nodes[d.outl[0]-1]["animation.x.active"][0][state]); },
-    y2: function(d, i) { return yScale(nodes[d.outl[0]-1]["animation.y.active"][0][state]); },
+    x1: function(d, i) { return xScale(nodes[d.inl[0]-1]["animation.x.active"][0][currTime]); },
+    y1: function(d, i) { return yScale(nodes[d.inl[0]-1]["animation.y.active"][0][currTime]); },
+    x2: function(d, i) { return xScale(nodes[d.outl[0]-1]["animation.x.active"][0][currTime]); },
+    y2: function(d, i) { return yScale(nodes[d.outl[0]-1]["animation.y.active"][0][currTime]); },
   });
 
   var circles = container.select('#nodes').selectAll('circle').data(nodes)
-    .attr("cx", function(d) { return xScale(d["animation.x.active"][0][state]); })
-    .attr("cy", function(d) { return yScale(d["animation.y.active"][0][state]); })
+    .attr("cx", function(d) { return xScale(d["animation.x.active"][0][currTime]); })
+    .attr("cy", function(d) { return yScale(d["animation.y.active"][0][currTime]); })
 
   var labels = container.select('#labels').selectAll('text').data(nodes)
-    .attr("x", function(d) { return xScale(d["animation.x.active"][0][state])+textPadding; })
-    .attr("y", function(d) { return yScale(d["animation.y.active"][0][state])+textPadding; })
+    .attr("x", function(d) { return xScale(d["animation.x.active"][0][currTime])+textPadding; })
+    .attr("y", function(d) { return yScale(d["animation.y.active"][0][currTime])+textPadding; })
 }
 
 var init = function() {
@@ -51,8 +51,8 @@ var updateCount = function() {
   slider.animate(defaultDuration)
   slider.on('slide', function(ext, value) {
       endAnimation();
-      var duration = 200/Math.abs(state-value);
-      animateGraph(state, value, duration, true);
+      var duration = 200/Math.abs(currTime-value);
+      animateGraph(currTime, value, duration, true);
     })
   d3.select('#slider').call(slider);
 
@@ -63,7 +63,7 @@ var edgeFilter = function(e) {
   return $.grep(edges, function(edge, i) {
     var active = false;
     $.each(edge.atl.active, function(i, e) {
-      if(e[0] <= state && e[1] >= state) {
+      if(e[0] <= currTime && e[1] >= currTime) {
         active = true;
         return false;
       }
@@ -76,76 +76,81 @@ var drawCircles = function(duration) {
   var textPadding = 12;
 
   var lines = container.select('#edges').selectAll('line').data(edgeFilter(), function(e) { return e.inl[0]+'_'+e.outl[0]})
-  lines.transition()
-    .delay(duration/2)
-    .duration(duration/2)
-    .attr({
-      x1: function(d, i) { return xScale(nodes[d.inl[0]-1]["animation.x.active"][0][state]); },
-      y1: function(d, i) { return yScale(nodes[d.inl[0]-1]["animation.y.active"][0][state]); },
-      x2: function(d, i) { return xScale(nodes[d.outl[0]-1]["animation.x.active"][0][state]); },
-      y2: function(d, i) { return yScale(nodes[d.outl[0]-1]["animation.y.active"][0][state]); },
-    })
 
-  lines.enter()
-  .append('line')
-    .attr('class', 'edge')
-    .attr({
-      x1: function(d, i) { return xScale(nodes[d.inl[0]-1]["animation.x.active"][0][state]); },
-      y1: function(d, i) { return yScale(nodes[d.inl[0]-1]["animation.y.active"][0][state]); },
-      x2: function(d, i) { return xScale(nodes[d.outl[0]-1]["animation.x.active"][0][state]); },
-      y2: function(d, i) { return yScale(nodes[d.outl[0]-1]["animation.y.active"][0][state]); },
-      stroke: 'green',
-      opacity: 0
-    })
-    .transition()
-    .duration(0)
-    .delay(duration)
-    .attr({
-      opacity: 1,
-    })
+    lines.enter().append('line')
+      .attr('class', 'edge')
+      .attr({
+        x1: function(d, i) { return xScale(nodes[d.inl[0]-1]["animation.x.active"][0][prevTime]); },
+        y1: function(d, i) { return yScale(nodes[d.inl[0]-1]["animation.y.active"][0][prevTime]); },
+        x2: function(d, i) { return xScale(nodes[d.outl[0]-1]["animation.x.active"][0][prevTime]); },
+        y2: function(d, i) { return yScale(nodes[d.outl[0]-1]["animation.y.active"][0][prevTime]); },
+        opacity: 0
+      })
+      .style('stroke', 'green')
+      .transition()
+      .duration(duration*0.45)
+      .attr({opacity: 1})
+      // .transition()
+      // .delay(duration*0.45)
+      // .duration(0)
+      // .style('stroke', 'black')
 
-  lines.exit()
-    .attr('stroke', 'red')
-    .transition()
-    .duration(duration/2)
-    .attr('opacity', 0)          
-    //.delay(duration/2)
-    .remove();
+      lines.transition()
+        .delay(duration/2)
+        .duration(duration/2)
+        .attr({
+          x1: function(d, i) { return xScale(nodes[d.inl[0]-1]["animation.x.active"][0][currTime]); },
+          y1: function(d, i) { return yScale(nodes[d.inl[0]-1]["animation.y.active"][0][currTime]); },
+          x2: function(d, i) { return xScale(nodes[d.outl[0]-1]["animation.x.active"][0][currTime]); },
+          y2: function(d, i) { return yScale(nodes[d.outl[0]-1]["animation.y.active"][0][currTime]); },
+        })
+        .style('stroke', 'black')
+
+    lines.exit()
+      .style('stroke', 'red')
+      .transition()
+      .duration(duration/2)
+      .attr('opacity', 0)          
+      .remove();
 
   var circles = container.select('#nodes').selectAll('circle').data(nodes);
-  circles.enter().append('circle')
-    .attr('class', 'node')
-    .attr("cx", function(d) { return xScale(d["animation.x.active"][0][state]); })
-    .attr("cy", function(d) { return yScale(d["animation.y.active"][0][state]); })
-    .attr("r", 10) //function(d) { return d.z[state]; })
-    .attr('opacity', 0)
-  circles.transition()
-    .delay(duration/2)
-    .duration(duration/2)
-    .attr("cx", function(d) { return xScale(d["animation.x.active"][0][state]); })
-    .attr("cy", function(d) { return yScale(d["animation.y.active"][0][state]); })
-//          .attr("r", function(d) { return d.z[state]; })
-    .attr('opacity', 1)   
-  circles.exit().remove();
+    circles.enter().append('circle')
+      .attr('class', 'node')
+      .attr("cx", function(d) { return xScale(d["animation.x.active"][0][currTime]); })
+      .attr("cy", function(d) { return yScale(d["animation.y.active"][0][currTime]); })
+      .attr("r", 10) //function(d) { return d.z[state]; })
+      .attr('opacity', 0)
+      .transition()
+      .duration(duration/2)
+      .attr('opacity', 1)
+
+    circles.transition()
+      .delay(duration/2)
+      .duration(duration/2)
+      .attr("cx", function(d) { return xScale(d["animation.x.active"][0][currTime]); })
+      .attr("cy", function(d) { return yScale(d["animation.y.active"][0][currTime]); })
+  //          .attr("r", function(d) { return d.z[currTime]; })
+    circles.exit().remove();
 
   var labels = container.select('#labels').selectAll('text').data(nodes);
-  labels.enter().append('text')
-    .attr('class', 'label')
-    .attr("x", function(d) { return xScale(d["animation.x.active"][0][state])+textPadding; })
-    .attr("y", function(d) { return yScale(d["animation.y.active"][0][state]); })
-    .text(function(d) { return d['vertex.names'][0]; })
-    .attr('opacity', 0) 
-  labels.transition()
-    .delay(duration/2)
-    .duration(duration/2)
-    .attr("x", function(d) { return xScale(d["animation.x.active"][0][state])+textPadding; })
-    .attr("y", function(d) { return yScale(d["animation.y.active"][0][state]); })
-    .attr('opacity', 1)
-  labels.exit().remove();
+    labels.enter().append('text')
+      .attr('class', 'label')
+      .attr("x", function(d) { return xScale(d["animation.x.active"][0][currTime])+textPadding; })
+      .attr("y", function(d) { return yScale(d["animation.y.active"][0][currTime]); })
+      .text(function(d) { return d['vertex.names'][0]; })
+      .attr('opacity', 0) 
+    labels.transition()
+      .delay(duration/2)
+      .duration(duration/2)
+      .attr("x", function(d) { return xScale(d["animation.x.active"][0][currTime])+textPadding; })
+      .attr("y", function(d) { return yScale(d["animation.y.active"][0][currTime]); })
+      .attr('opacity', 1)
+    labels.exit().remove();
 
 }
 
 var animateGraph = function(time, endTime, duration, noUpdate) {
+
   if(! noUpdate) {
     slider.value(time);
   }
@@ -154,8 +159,9 @@ var animateGraph = function(time, endTime, duration, noUpdate) {
   endTime = endTime === undefined ? maxTime : endTime;
   var nextTime = endTime > time ? time +1 : time -1;
   //console.log(nextTime)
-  state = time;
-  //console.log(state + ' '+time+' '+endTime+ ' '+nextTime)
+  prevTime = currTime;
+  currTime = time;
+  //console.log(currTime + ' '+time+' '+endTime+ ' '+nextTime)
   drawCircles(duration);
   if (time != endTime) {
     animate = setTimeout(function(){
@@ -198,7 +204,8 @@ function dragended(d) {
 $(function() {
   minRadius = 15;
   maxRadius = 2;
-  state = 0;
+  currTime = 0;
+  prevTime = 0;
   $(window).resize(resize);
   var svg = d3.select("#circles")
     .append("svg:svg")
@@ -219,10 +226,10 @@ $(function() {
 
   updateCount();
 /*        $('#circles').on('click', function() { 
-    if (state != maxTime) { 
-      animateGraph(state); 
+    if (currTime != maxTime) { 
+      animateGraph(currTime); 
     } else {
-      animateGraph(state, 0); 
+      animateGraph(currTime, 0); 
     }
   })
 */      })
