@@ -8,7 +8,7 @@ var textPadding = 12;
 
 var resize = function() {
   initScales();
-  var lines = container.select('#edges').selectAll('line').data(dataFilter('edge'), function(e) { return e.inl[0]+'_'+e.outl[0]})
+  var lines = container.select('#edges').selectAll('line').data(dataFilter('edge'), function(e) { return e.id})
     .attr({
       x1: function(d, i) { return xScale(timeLookup('coord', d.inl[0]-1)[0]); },
       y1: function(d, i) { return yScale(timeLookup('coord', d.inl[0]-1)[1]); },
@@ -16,14 +16,14 @@ var resize = function() {
       y2: function(d, i) { return yScale(timeLookup('coord', d.outl[0]-1)[1]); },
     });
 
-  var circles = container.select('#nodes').selectAll('circle').data(dataFilter('node'))
+  var circles = container.select('#nodes').selectAll('circle').data(dataFilter('node'), function(e) { return e.id})
     .attr({
       cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
       cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
       r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
     });
 
-  var labels = container.select('#labels').selectAll('text').data(dataFilter('node'))
+  var labels = container.select('#labels').selectAll('text').data(dataFilter('node'), function(e) { return e.id})
     .attr({
       x: function(d, i) { return xScale(timeLookup('coord', i)[0])+textPadding; },
       y: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
@@ -66,6 +66,17 @@ var loadData = function(url) {
     initScales();
     nodes = graph.val;
     edges = graph.mel;
+
+    $.each(nodes, function(i, n) {
+      if (! $.isEmptyObject(n)) {
+        n.id = i;
+      }
+    })
+    $.each(edges, function(i, e) {
+      if (! $.isEmptyObject(e)) {
+        e.id = i;
+      }
+    })
 
     var sliceInfo = graph.gal['slice.par'];
     minTime = sliceInfo.start[0];
@@ -126,6 +137,10 @@ var dataFilter = function(type) {
       if (item.active || (item.atl && item.atl.active)) {
         var activeProperty = type == 'node' ? item.active : item.atl.active;
         $.each(activeProperty, function(i, e) {
+          $.each(e, function(i, num){
+            if (num == 'Inf') { e[i] = Infinity; }
+            if (num == '-Inf') { e[i] = -Infinity; }
+          })
           if(e[0] <= currTime && e[1] >= currTime) {
             active = true;
             return false;
@@ -154,7 +169,7 @@ var timeLookup = function(property, index, time) {
 var drawGraph = function(duration) {
 
   $('#key').html(timeIndex[currTime].data.xlab[0])
-  var lines = container.select('#edges').selectAll('line').data(dataFilter('edge'), function(e) { return e.inl[0]+'_'+e.outl[0]})
+  var lines = container.select('#edges').selectAll('line').data(dataFilter('edge'), function(e) { return e.id})
 
     lines.enter().append('line')
       .attr('class', 'edge')
@@ -192,7 +207,7 @@ var drawGraph = function(duration) {
       .attr('opacity', 0)          
       .remove();
 
-  var circles = container.select('#nodes').selectAll('circle').data(dataFilter('node'));
+  var circles = container.select('#nodes').selectAll('circle').data(dataFilter('node'), function(e) { return e.id});
     circles.enter().append('circle')
       .attr({
         class: 'node',
@@ -226,7 +241,7 @@ var drawGraph = function(duration) {
       .attr('opacity', 0)
       .remove();
 
-  var labels = container.select('#labels').selectAll('text').data(dataFilter('node'));
+  var labels = container.select('#labels').selectAll('text').data(dataFilter('node'), function(e) { return e.id});
     labels.enter().append('text')
       .attr({
         class: 'label',
