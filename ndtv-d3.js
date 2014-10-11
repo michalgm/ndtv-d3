@@ -1,4 +1,4 @@
-var nodes, width, height, container, xScale, yScale, zScale, edges, maxTime, slider, animate, baseNodeSize;
+var nodes, width, height, container, xScale, yScale, zScale, edges, maxTime, slider, animate, baseNodeSize, timeIndex;
 var currTime = 0;
 var prevTime = 0;
 
@@ -8,25 +8,25 @@ var textPadding = 12;
 
 var resize = function() {
   initScales();
-  var lines = container.select('#edges').selectAll('line').data(edgeFilter(), function(e) { return e.inl[0]+'_'+e.outl[0]})
-  .attr({
-    x1: function(d, i) { return xScale(getActive('coord', currTime)[d.inl[0]-1][0]); },
-    y1: function(d, i) { return yScale(getActive('coord', currTime)[d.inl[0]-1][1]); },
-    x2: function(d, i) { return xScale(getActive('coord', currTime)[d.outl[0]-1][0]); },
-    y2: function(d, i) { return yScale(getActive('coord', currTime)[d.outl[0]-1][1]); },
-  });
-
-  var circles = container.select('#nodes').selectAll('circle').data(nodes)
-  .attr({
-    cx: function(d, i) { return xScale(getActive('coord', currTime)[i][0]); },
-    cy: function(d, i) { return yScale(getActive('coord', currTime)[i][1]); },
-    r: function(d, i) { return getActive('vertex.cex', currTime)[i] * baseNodeSize; },
-  });
-
-  var labels = container.select('#labels').selectAll('text').data(nodes)
+  var lines = container.select('#edges').selectAll('line').data(dataFilter('edge'), function(e) { return e.inl[0]+'_'+e.outl[0]})
     .attr({
-      x: function(d, i) { return xScale(getActive('coord', currTime)[i][0])+textPadding; },
-      y: function(d, i) { return yScale(getActive('coord', currTime)[i][1]); },
+      x1: function(d, i) { return xScale(timeLookup('coord', d.inl[0]-1)[0]); },
+      y1: function(d, i) { return yScale(timeLookup('coord', d.inl[0]-1)[1]); },
+      x2: function(d, i) { return xScale(timeLookup('coord', d.outl[0]-1)[0]); },
+      y2: function(d, i) { return yScale(timeLookup('coord', d.outl[0]-1)[1]); },
+    });
+
+  var circles = container.select('#nodes').selectAll('circle').data(dataFilter('node'))
+    .attr({
+      cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
+      cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
+      r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
+    });
+
+  var labels = container.select('#labels').selectAll('text').data(dataFilter('node'))
+    .attr({
+      x: function(d, i) { return xScale(timeLookup('coord', i)[0])+textPadding; },
+      y: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
     })
 }
 
@@ -54,64 +54,115 @@ var initScales = function() {
     .range([height, 0]);
 }
 
-var loadData = function() {
-  initScales();
-  nodes = graph.val;
-  edges = graph.mel;
-  maxTime = 24;
+var loadData = function(url) {
+  currTime = 0;
+  prevTime = 0;
+  $.getJSON(url, function(data) {
+    graph = data;
+    container.select('#edges').selectAll('*').remove();
+    container.select('#labels').selectAll('*').remove();
+    container.select('#nodes').selectAll('*').remove();
 
-  slider = d3.slider().axis(true).step(1);
-  slider.min(1)
-  slider.max(maxTime+1)
-  slider.animate(defaultDuration)
-  slider.value(1)
-  slider.on('slide', function(ext, value) {
-      endAnimation();
-      var duration = 200/Math.abs(currTime-value-1);
-      animateGraph(currTime, value-1, duration, true);
-    })
-  d3.select('#slider').call(slider);
+    initScales();
+    nodes = graph.val;
+    edges = graph.mel;
 
-  drawGraph(defaultDuration);
-}
+    var sliceInfo = graph.gal['slice.par'];
+    minTime = sliceInfo.start[0];
+    maxTime = sliceInfo.end[0];
+    interval = sliceInfo.interval[0];
 
-var getActive = function(prop, time) {
-  var value;
-  var props = graph.gal[prop+'.active'];
-  $.each(props[1], function(i, times){
-    if (times[0] <= time && times[1] > time) {
-      value = props[0][i][prop];
+    var valIndex = {};
+    timeIndex = [];
+    var i = 0;
+    for(var t = minTime; t<=maxTime-interval; t+=interval) {
+      var slice = {
+        startTime: t,
+        endTime: t+sliceInfo['aggregate.dur'][0],
+        data: {}
+      };
+      $.each(['coord', 'vertex.cex', 'label', 'vertex.col', 'xlab'], function(i, prop) {
+        var props = graph.gal[prop+'.active'];
+        if (! props) { 
+          //console.log('no property: '+prop); 
+          return;
+        }
+        $.each(props[1], function(i, slices){
+          if (slices[0] <= t && slices[1] > t) {
+            slice.data[prop] = props[0][i][prop];
+            return false;
+          }
+        })      
+      })
+      timeIndex.push(slice);
+      valIndex[t] = i;
+      i++;
     }
+
+    $('#slider').html('');
+
+    slider = d3.slider().axis(true).step(interval);
+    slider.min(minTime)
+    slider.max(maxTime-interval)
+    slider.animate(defaultDuration)
+    slider.value(minTime)
+    slider.on('slide', function(ext, value) {
+        endAnimation();
+        var duration = 200/Math.abs(currTime-value);
+        animateGraph(currTime, valIndex[value], duration, true);
+      })
+    d3.select('#slider').call(slider);
+
+    drawGraph(defaultDuration);
   })
-  return value;
 }
 
-var edgeFilter = function(e) {
-  return $.grep(edges, function(edge, i) {
+var dataFilter = function(type) {
+  var dataList = type == 'node' ? nodes : edges;
+
+  return $.grep(dataList, function(item, i) {
     var active = false;
-    $.each(edge.atl.active, function(i, e) {
-      if(e[0] <= currTime && e[1] >= currTime) {
+    if (! $.isEmptyObject(item)) {
+      if (item.active || (item.atl && item.atl.active)) {
+        var activeProperty = type == 'node' ? item.active : item.atl.active;
+        $.each(activeProperty, function(i, e) {
+          if(e[0] <= currTime && e[1] >= currTime) {
+            active = true;
+            return false;
+          }
+        })
+      } else {
         active = true;
-        return false;
       }
-    })
+    }
     return active;
   });
 }
 
+var timeLookup = function(property, index, time) {
+  time = time || currTime;
+  var defaults = {
+    'vertex.cex': 1,
+    //'vertex.col': 'inherit'
+  }
+  if (timeIndex[time].data[property]) {
+    return timeIndex[time].data[property][index];
+  } else {
+    return defaults[property];
+  }
+}
 var drawGraph = function(duration) {
 
-  $('#key').html(getActive('xlab', currTime)[0])
-
-  var lines = container.select('#edges').selectAll('line').data(edgeFilter(), function(e) { return e.inl[0]+'_'+e.outl[0]})
+  $('#key').html(timeIndex[currTime].data.xlab[0])
+  var lines = container.select('#edges').selectAll('line').data(dataFilter('edge'), function(e) { return e.inl[0]+'_'+e.outl[0]})
 
     lines.enter().append('line')
       .attr('class', 'edge')
       .attr({
-        x1: function(d, i) { return xScale(getActive('coord', prevTime)[d.inl[0]-1][0]); },
-        y1: function(d, i) { return yScale(getActive('coord', prevTime)[d.inl[0]-1][1]); },
-        x2: function(d, i) { return xScale(getActive('coord', prevTime)[d.outl[0]-1][0]); },
-        y2: function(d, i) { return yScale(getActive('coord', prevTime)[d.outl[0]-1][1]); },
+        x1: function(d, i) { return xScale(timeLookup('coord', d.inl[0]-1, prevTime)[0]); },
+        y1: function(d, i) { return yScale(timeLookup('coord', d.inl[0]-1, prevTime)[1]); },
+        x2: function(d, i) { return xScale(timeLookup('coord', d.outl[0]-1, prevTime)[0]); },
+        y2: function(d, i) { return yScale(timeLookup('coord', d.outl[0]-1, prevTime)[1]); },
         opacity: 0
       })
       .style('stroke', 'green')
@@ -127,10 +178,10 @@ var drawGraph = function(duration) {
         .delay(duration/2)
         .duration(duration/2)
         .attr({
-          x1: function(d, i) { return xScale(getActive('coord', currTime)[d.inl[0]-1][0]); },
-          y1: function(d, i) { return yScale(getActive('coord', currTime)[d.inl[0]-1][1]); },
-          x2: function(d, i) { return xScale(getActive('coord', currTime)[d.outl[0]-1][0]); },
-          y2: function(d, i) { return yScale(getActive('coord', currTime)[d.outl[0]-1][1]); },
+          x1: function(d, i) { return xScale(timeLookup('coord', d.inl[0]-1)[0]); },
+          y1: function(d, i) { return yScale(timeLookup('coord', d.inl[0]-1)[1]); },
+          x2: function(d, i) { return xScale(timeLookup('coord', d.outl[0]-1)[0]); },
+          y2: function(d, i) { return yScale(timeLookup('coord', d.outl[0]-1)[1]); },
         })
         .style('stroke', 'black')
 
@@ -141,32 +192,32 @@ var drawGraph = function(duration) {
       .attr('opacity', 0)          
       .remove();
 
-  var circles = container.select('#nodes').selectAll('circle').data(nodes);
+  var circles = container.select('#nodes').selectAll('circle').data(dataFilter('node'));
     circles.enter().append('circle')
       .attr({
         class: 'node',
-        cx: function(d, i) { return xScale(getActive('coord', currTime)[i][0]); },
-        cy: function(d, i) { return yScale(getActive('coord', currTime)[i][1]); },
-        r: function(d, i) { return getActive('vertex.cex', currTime)[i] * baseNodeSize; },
+        cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
+        cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
+        r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
         opacity: 0,
       })
       .transition()
       .duration(duration/2)
       .attr('opacity', 1)
       .style('fill', function(d, i) {
-        return getActive('vertex.col', currTime)[i];
+        return timeLookup('vertex.col', i);
       })
 
     circles.transition()
       .delay(duration/2)
       .duration(duration/2)
       .attr({
-        cx: function(d, i) { return xScale(getActive('coord', currTime)[i][0]); },
-        cy: function(d, i) { return yScale(getActive('coord', currTime)[i][1]); },
-        r: function(d, i) { return getActive('vertex.cex', currTime)[i] * baseNodeSize; },
+        cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
+        cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
+        r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
       })
       .style('fill', function(d, i) {
-        return getActive('vertex.col', currTime)[i];
+        return timeLookup('vertex.col', i);
       })
 
     circles.exit()
@@ -175,37 +226,36 @@ var drawGraph = function(duration) {
       .attr('opacity', 0)
       .remove();
 
-  var labels = container.select('#labels').selectAll('text').data(nodes);
+  var labels = container.select('#labels').selectAll('text').data(dataFilter('node'));
     labels.enter().append('text')
       .attr({
         class: 'label',
-        x: function(d, i) { return xScale(getActive('coord', currTime)[i][0])+textPadding; },
-        y: function(d, i) { return yScale(getActive('coord', currTime)[i][1]); },
+        x: function(d, i) { return xScale(timeLookup('coord', i)[0])+textPadding; },
+        y: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
         opacity: 0
       })
-      .text(function(d, i) { return getActive('label', currTime)[i]; })
+      .text(function(d, i) { return timeLookup('label', i); })
 
     labels.transition()
       .delay(duration/2)
       .duration(duration/2)
       .attr({
-        x: function(d, i) { return xScale(getActive('coord', currTime)[i][0])+textPadding; },
-        y: function(d, i) { return yScale(getActive('coord', currTime)[i][1]); },
+        x: function(d, i) { return xScale(timeLookup('coord', i)[0])+textPadding; },
+        y: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
         opacity: 1
       })
-      .text(function(d, i) { return getActive('label', currTime)[i]; })
+      .text(function(d, i) { return timeLookup('label', i); })
 
     labels.exit().remove();
-
 }
 
 var animateGraph = function(time, endTime, duration, noUpdate) {
-  if (endTime !== undefined && ! $.isNumeric(endTime)) { return; }
-  if (time > maxTime) { return; }
-  // console.log(currTime + ' '+time+' '+endTime+ ' '+nextTime)
+  //if (endTime !== undefined && ! $.isNumeric(endTime)) { return; }
+  if (time > maxTime-1) { return; }
+  //console.log(currTime + ' '+time+' '+endTime+ ' '+nextTime)
 
   if(! noUpdate) {
-    slider.value(time+1);
+    slider.value(timeIndex[time].startTime);
   }
   duration = duration === undefined ? defaultDuration : duration;
   endTime = endTime === undefined ? maxTime : endTime;
@@ -274,5 +324,15 @@ var SVGSetup = function() {
 
 $(function() {
   SVGSetup();
-  loadData();
+  loadData('data/data.json');
+
+  $.get('data/', function(data){
+    var matches = data.match(/<td><a href="[^"]*"/g);
+    $.each(matches, function(i, m) {
+      var url = m.match(/href="([^"]*)"/)[1];
+      if (url.match(/.json$/)) {
+        $('#graph_chooser').append("<option>"+url+"</option>")
+      }
+    })
+  })
 })
