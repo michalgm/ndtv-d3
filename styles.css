@@ -36,3 +36,11 @@ body, html {
 #controls i:hover {
   color: blue;
 }
+
+#data_chooser_container {
+  position: absolute; top: 10px; left: 10px;
+}
+
+#play-control-container {
+  display: none;
+}

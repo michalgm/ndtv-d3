@@ -5,29 +5,40 @@
     <link rel='stylesheet' href='d3.slider/d3.slider.css'/>
     <link rel='stylesheet' href='styles.css'/>
     <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
-    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-    <script src="d3.slider/d3.slider.js"></script>
-    <script src="ndtv-d3.js"></script>
   </head>
   <body>
+  <!--
     <div id='graph_chooser_container' style='position: absolute; top: 10px; left: 10px;'>
       <select id='graph_chooser' onchange="loadData('data/'+$(this).val()); $('#video_link').attr('href', 'data/'+$(this).val().replace('.json', '.mp4'))"></select>
       <a id='video_link' target='_blank' href=''>Video</a>
-    </div>
+    </div>-->
     <div id='graph'></div>
     <div id='key'></div>
     <div id='controls'>
-      <div>
+      <div id='play-control-container'>
         <div style='float: right; width: 10%; background: #ccc; border-radius: 5px; padding: 10px'>
-          <i onclick='animateGraph(currTime-1, currTime-1)' class="fa fa-step-backward fa-2x"></i>
-          <i onclick='animateGraph(currTime-1, 0)' class="fa fa-play fa-flip-horizontal fa-2x"></i>
-          <i onclick='endAnimation()' class="fa fa-pause fa-2x"></i>
-          <i onclick='animateGraph(currTime+1)'class="fa fa-play fa-2x"></i>
-          <i onclick='animateGraph(currTime+1, currTime+1)'class="fa fa-step-forward fa-2x"></i>
+          <i id='step-back-control' class="fa fa-step-backward fa-2x"></i>
+          <i id='play-back-control' class="fa fa-play fa-flip-horizontal fa-2x"></i>
+          <i id='pause-control' class="fa fa-pause fa-2x"></i>
+          <i id='play-forward-control' class="fa fa-play fa-2x"></i>
+          <i id='step-forward-control' class="fa fa-step-forward fa-2x"></i>
         </div>
         <div style='width: 85%;' id='slider'></div>
       </div>
     </div>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="d3.slider/d3.slider.js"></script>
+    <script src="ndtv-d3.js"></script>
+    <script>
+      $(function() {
+        var options = {
+          dataChooser: true,
+          initialDataUrl: 'data/msmSim.json'
+        }
+        var graph = new ndtv_d3(options);
+        
+      })
+    </script>
   </body>
 </html>
