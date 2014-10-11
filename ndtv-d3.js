@@ -6,33 +6,17 @@ var defaultDuration = 800;
 var margin = {x: 20, y: 10};
 var textPadding = 12;
 
-var resize = function() {
-  initScales();
-  var lines = container.select('#edges').selectAll('line').data(dataFilter('edge'), function(e) { return e.id})
-    .attr({
-      x1: function(d, i) { return xScale(timeLookup('coord', d.inl[0]-1)[0]); },
-      y1: function(d, i) { return yScale(timeLookup('coord', d.inl[0]-1)[1]); },
-      x2: function(d, i) { return xScale(timeLookup('coord', d.outl[0]-1)[0]); },
-      y2: function(d, i) { return yScale(timeLookup('coord', d.outl[0]-1)[1]); },
-    });
-
-  var circles = container.select('#nodes').selectAll('circle').data(dataFilter('node'), function(e) { return e.id})
-    .attr({
-      cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
-      cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
-      r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
-    });
-
-  var labels = container.select('#labels').selectAll('text').data(dataFilter('node'), function(e) { return e.id})
-    .attr({
-      x: function(d, i) { return xScale(timeLookup('coord', i)[0])+textPadding; },
-      y: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
-    })
-}
-
 var initScales = function() {
-  width = $(window).width() - (margin.x*2);
-  height = $(window).height() - (margin.y*2) - 110;
+  var window_width = $(window).width();
+  var window_height = $(window).height()-110;
+  if (window_width > window_height) { 
+    margin.x = (window_width - window_height)/2
+  } else {
+    margin.y = (window_height - window_width)/2
+  }
+
+  width = window_width - (margin.x*2);
+  height = window_height - (margin.y*2);
 
   baseNodeSize = width > height ? height /100 : width/100;
 
@@ -58,6 +42,7 @@ var loadData = function(url) {
   currTime = 0;
   prevTime = 0;
   $.getJSON(url, function(data) {
+    console.time('loadData');
     graph = data;
     container.select('#edges').selectAll('*').remove();
     container.select('#labels').selectAll('*').remove();
@@ -92,7 +77,7 @@ var loadData = function(url) {
         endTime: t+sliceInfo['aggregate.dur'][0],
         data: {}
       };
-      $.each(['coord', 'vertex.cex', 'label', 'vertex.col', 'xlab'], function(i, prop) {
+      $.each(['coord', 'vertex.cex', 'label', 'vertex.col', 'xlab', 'vertex.sides', 'displaylabels'], function(i, prop) {
         var props = graph.gal[prop+'.active'];
         if (! props) { 
           //console.log('no property: '+prop); 
@@ -123,6 +108,7 @@ var loadData = function(url) {
         animateGraph(currTime, valIndex[value], duration, true);
       })
     d3.select('#slider').call(slider);
+    console.timeEnd('loadData');
 
     drawGraph(defaultDuration);
   })
@@ -242,7 +228,7 @@ var drawGraph = function(duration) {
       .remove();
 
   var labels = container.select('#labels').selectAll('text').data(dataFilter('node'), function(e) { return e.id});
-    labels.enter().append('text')
+    labels.enter().append('text').filter(function(d) { return timeLookup('displaylabels', 0)})
       .attr({
         class: 'label',
         x: function(d, i) { return xScale(timeLookup('coord', i)[0])+textPadding; },
@@ -251,7 +237,7 @@ var drawGraph = function(duration) {
       })
       .text(function(d, i) { return timeLookup('label', i); })
 
-    labels.transition()
+    labels.transition().filter(function(d) { return timeLookup('displaylabels', 0) !== false})
       .delay(duration/2)
       .duration(duration/2)
       .attr({
@@ -262,6 +248,30 @@ var drawGraph = function(duration) {
       .text(function(d, i) { return timeLookup('label', i); })
 
     labels.exit().remove();
+}
+
+var resize = function() {
+  initScales();
+  var lines = container.select('#edges').selectAll('line').data(dataFilter('edge'), function(e) { return e.id})
+    .attr({
+      x1: function(d, i) { return xScale(timeLookup('coord', d.inl[0]-1)[0]); },
+      y1: function(d, i) { return yScale(timeLookup('coord', d.inl[0]-1)[1]); },
+      x2: function(d, i) { return xScale(timeLookup('coord', d.outl[0]-1)[0]); },
+      y2: function(d, i) { return yScale(timeLookup('coord', d.outl[0]-1)[1]); },
+    });
+
+  var circles = container.select('#nodes').selectAll('circle').data(dataFilter('node'), function(e) { return e.id})
+    .attr({
+      cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
+      cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
+      r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
+    });
+
+  var labels = container.select('#labels').selectAll('text').data(dataFilter('node'), function(e) { return e.id})
+    .attr({
+      x: function(d, i) { return xScale(timeLookup('coord', i)[0])+textPadding; },
+      y: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
+    })
 }
 
 var animateGraph = function(time, endTime, duration, noUpdate) {
