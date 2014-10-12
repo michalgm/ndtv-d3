@@ -21,6 +21,7 @@ var ndtv_d3 = (function() {
   }
   
   var nodes,
+      graph,
       edges,
       container,
       xScale,
@@ -43,8 +44,9 @@ var ndtv_d3 = (function() {
     if (options.playControls) { createPlayControls(); }
     SVGSetup();
     if(options.initialDataUrl) { n3.loadData(options.initialDataUrl); }
+    this._timeIndex = []; 
   }
-
+  
   var SVGSetup = function() {
     var zoom = d3.behavior.zoom()
         .scaleExtent([1, 10])
@@ -174,25 +176,7 @@ var ndtv_d3 = (function() {
     var dataList = type == 'node' ? nodes : edges;
 
     return $.grep(dataList, function(item, i) {
-      var active = false;
-      if (! $.isEmptyObject(item)) {
-        if (item.active || (item.atl && item.atl.active)) {
-          var activeProperty = type == 'node' ? item.active : item.atl.active;
-          $.each(activeProperty, function(i, e) {
-            $.each(e, function(i, num){
-              if (num == 'Inf') { e[i] = Infinity; }
-              if (num == '-Inf') { e[i] = -Infinity; }
-            })
-            if(e[0] <= currTime && e[1] >= currTime) {
-              active = true;
-              return false;
-            }
-          })
-        } else {
-          active = true;
-        }
-      }
-      return active;
+      return n3._timeIndex[currTime].data.active[type+'s'][item.id];
     });
   }
 
@@ -205,11 +189,71 @@ var ndtv_d3 = (function() {
       'vertex.col': 'red',
       //'vertex.col': 'inherit'
     }
-    if (timeIndex[time].data[property] !== undefined) {
-      return timeIndex[time].data[property][index];
+    if (n3._timeIndex[time].data[property] !== undefined && n3._timeIndex[time].data[property][index] !== undefined) {
+      return n3._timeIndex[time].data[property][index];
     } else {
+      if (property == 'coord') {
+        console.log(index)
+        console.log(time)
+      }
       return defaults[property];
     }
+  }
+
+
+  var drawLine = function() {
+    return d3.svg.line()
+      .x(function(d){return d[0];})
+      .y(function(d){return d[1];})
+  }
+
+  var drawPolygon = function(d) { //sides, size, centerx, centery, rotation) { 
+    var sides = timeLookup('vertex.sides', d.id);
+    var size = timeLookup('vertex.cex', d.id) * baseNodeSize;
+    var coords = timeLookup('coord', d.id);
+    var rotation = timeLookup('vertex.rot', d.id)
+    var poly = [];
+    var rot = (rotation-45)/360*2*Math.PI
+    var t1 = 2 * Math.PI / sides;
+    var t2 = (Math.PI / sides) + rot;
+    
+    for (var i = 0; i < sides; i++) {
+        var t = t2 + t1 * i;
+        var x = size* Math.sin(t) + xScale(coords[0]);
+        var y = size * Math.cos(t)+ yScale(coords[1]);
+        poly.push([x, y]);
+    }
+    return drawLine()(poly) + 'Z';
+  }
+
+  var getLineCoords = function(d, time) {
+    var time1 = time; 
+    var time2 = time;
+    if (time == prevTime) {
+      if (! n3._timeIndex[time].data.active.nodes[d.inl[0]-1]) { time1 = currTime; }
+      if (! n3._timeIndex[time].data.active.nodes[d.outl[0]-1]) { time2 = currTime; }
+    }
+    var coord1 = timeLookup('coord', d.inl[0]-1, time1);
+    var coord2 = timeLookup('coord', d.outl[0]-1, time2);
+    var x1 = xScale(coord1[0]);
+    var y1 = yScale(coord1[1]);
+    var x2 = xScale(coord2[0]);
+    var y2 = yScale(coord2[1]);
+    var radius = timeLookup('vertex.cex', d.outl[0]-1, time) * baseNodeSize + 2;
+
+    // Determine line lengths
+    var xlen = x2 - x1;
+    var ylen = y2 - y1;
+
+    // Determine hypotenuse length
+    var hlen = Math.sqrt(Math.pow(xlen,2) + Math.pow(ylen,2));
+
+    // Determine the ratio between they shortened value and the full hypotenuse.
+    var ratio = (hlen - radius) / hlen;
+
+    var edgeX = x1 + (xlen * ratio);
+    var edgeY = y1 + (ylen * ratio);
+    return 'M '+x1+' '+y1+' L '+edgeX+' '+edgeY;
   }
 
   //Public Functions
@@ -249,31 +293,104 @@ var ndtv_d3 = (function() {
       interval = sliceInfo.interval[0];
 
       var valIndex = {};
-      timeIndex = [];
+      n3._timeIndex = [];
       var i = 0;
+
+      var checkInterval = function(start, end, slice) {
+        $.each(slice, function(i, num){
+          if (num == 'Inf') { slice[i] = Infinity; }
+          if (num == '-Inf') { slice[i] = -Infinity; }
+        })
+
+        if (
+          (slice[0] < end && slice[1] > start) ||
+          (start == end)
+        ) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+      window.check = checkInterval;
+
       for(var t = minTime; t<=maxTime-interval; t+=interval) {
         var slice = {
           startTime: t,
           endTime: t+sliceInfo['aggregate.dur'][0],
           data: {}
         };
-        $.each(['coord', 'vertex.cex', 'label', 'vertex.col', 'xlab', 'vertex.sides', 'displaylabels'], function(i, prop) {
-          var props = graph.gal[prop+'.active'];
+        
+        slice.data.active = {
+          nodes: {},
+          edges: {},
+          node_index: [],
+          edge_index: []
+        };
+
+        $.each(['node', 'edge'], function(i, type) {
+          var data = type == 'node' ? nodes : edges;
+          $.each(data, function(i, item){
+            var active = false;
+            if (! $.isEmptyObject(item)) {
+              if (item.active || (item.atl && item.atl.active)) {
+                var activeProperty = type == 'node' ? item.active : item.atl.active;
+                $.each(activeProperty, function(i, s) {
+                  if(checkInterval(slice.startTime, slice.endTime, s)) {
+                    active = true;
+                    return false;
+                  }
+                })
+              } else {
+                active = true;
+              }
+              slice.data.active[type+'s'][item.id] = active;
+              if (active) {
+                slice.data.active[type+'_index'].push(item.id);
+              }
+            } 
+          })
+        })
+
+        var activeProperties = [
+          ['xlab', 'graph'],
+          ['displaylabels', 'graph'],
+          ['coord', 'node'],
+          ['vertex.cex', 'node'],
+          ['label', 'node'],
+          ['vertex.col', 'node'],
+          ['vertex.sides', 'node'],
+          ['vertex.rot', 'node'],
+        ];
+        $.each(activeProperties, function(i, prop) {
+          var name = prop[0];
+          var type = prop[1];
+          var props = graph.gal[name+'.active'];
+
+          slice.data[name] = {};
           if (! props) { 
             //console.log('no property: '+prop); 
             return;
           }
-          $.each(props[1], function(i, slices){
-            if (slices[0] <= t && slices[1] > t) {
-              slice.data[prop] = props[0][i][prop];
+          $.each(props[1], function(i, s){
+            if(checkInterval(slice.startTime, slice.endTime, s)) {
+              if (type == 'graph') {
+                slice.data[name] = props[0][i][name];
+              } else {
+                $.each(props[0][i][name], function(i, value){
+                  var id = slice.data.active[type+'_index'][i];
+                  slice.data[name][id] = value;
+                })
+              }
               return false;
             }
           })      
         })
-        timeIndex.push(slice);
+        n3._timeIndex.push(slice);
         valIndex[t] = i;
         i++;
       }
+      window.timeIndex = n3._timeIndex;
+      window.graphdata = graph;
 
       $('#slider').html('');
 
@@ -306,67 +423,14 @@ var ndtv_d3 = (function() {
     var edgeDuration = duration * options.edgeTransitionFactor;
     var nodeDuration = duration * 1-options.edgeTransitionFactor;
 
-    var drawLine = function() {
-      return d3.svg.line()
-        .x(function(d){return d[0];})
-        .y(function(d){return d[1];})
-    }
-
-    var drawPolygon = function(d) { //sides, size, centerx, centery, rotation) { 
-      var sides = timeLookup('vertex.sides', d.id);
-      var size = timeLookup('vertex.cex', d.id) * baseNodeSize;
-      var coords = timeLookup('coord', d.id);
-      var rotation = timeLookup('vertex.rot', d.id)
-
-      var poly = [];
-      var rot = (rotation-45)/360*2*Math.PI
-      var t1 = 2 * Math.PI / sides;
-      var t2 = (Math.PI / sides) + rot;
-      
-      for (var i = 0; i < sides; i++) {
-          var t = t2 + t1 * i;
-          var x = size* Math.sin(t) + xScale(coords[0]);
-          var y = size * Math.cos(t)+ yScale(coords[1]);
-          poly.push([x, y]);
-      }
-      return drawLine()(poly) + 'Z';
-    }
-
-    var getLineCoords = function(d, time) {
-      var coord1 = timeLookup('coord', d.inl[0]-1, time);
-      var coord2 = timeLookup('coord', d.outl[0]-1, time);
-      var x1 = xScale(coord1[0]);
-      var y1 = yScale(coord1[1]);
-      var x2 = xScale(coord2[0]);
-      var y2 = yScale(coord2[1]);
-      var radius = timeLookup('vertex.cex', d.outl[0]-1, time) * baseNodeSize + 2;
-
-      // Determine line lengths
-      var xlen = x2 - x1;
-      var ylen = y2 - y1;
-
-      // Determine hypotenuse length
-      var hlen = Math.sqrt(Math.pow(xlen,2) + Math.pow(ylen,2));
-
-      // Determine the ratio between they shortened value and the full hypotenuse.
-      var ratio = (hlen - radius) / hlen;
-
-      var smallerX = x1 + (xlen * ratio);
-      var smallerY = y1 + (ylen * ratio);
-
-      return 'M '+x1+' '+y1+' L '+smallerX+' '+smallerY;
-    }
-
     $('#key').html(timeLookup('xlab', 0))
-    var lines = container.select('#edges').selectAll('path').data(dataFilter('edge'), function(e) { return e.id})
-
+    var lines = container.select('#edges').selectAll('.edge').data(dataFilter('edge'), function(e) { return e.id})
       lines.enter().append('path')
         .attr('class', 'edge')
         .attr({
           d: function(d) {return getLineCoords(d, prevTime);  },
           opacity: 0,
           "marker-end": "url(#arrowhead)"
-
         })
         .style('stroke', 'green')
         .transition()
@@ -377,17 +441,17 @@ var ndtv_d3 = (function() {
         // .duration(0)
         // .style('stroke', 'black')
 
-        lines.transition()
-          .delay(edgeDuration)
-          .duration(nodeDuration)
-          .attr({
-            d: function(d) { return getLineCoords(d, currTime); },
-            opacity: 1,
-          })
-          .each(function(d) { 
-            getLineCoords(d);
-          })
-          .style('stroke', 'black')
+      lines.transition()
+        .delay(edgeDuration)
+        .duration(nodeDuration)
+        .attr({
+          d: function(d) { return getLineCoords(d, currTime); },
+          opacity: 1,
+        })
+        .each(function(d) { 
+          getLineCoords(d);
+        })
+        .style('stroke', 'black')
 
       lines.exit()
         .style('stroke', 'red')
@@ -451,14 +515,14 @@ var ndtv_d3 = (function() {
           y: function(d, i) { return yScale(timeLookup('coord', d.id)[1])+options.labelOffset.y; },
           opacity: 1
         })
-        .text(function(d, i) { return timeLookup('label', d.id) + d.id; })
+        .text(function(d, i) { return timeLookup('label', d.id); })
 
       labels.exit().remove();
   }
 
   n3.resizeGraph = function() {
     initScales();
-    var lines = container.select('#edges').selectAll('line').data(dataFilter('edge'), function(e) { return e.id})
+    var lines = container.select('#edges').selectAll('.edge').data(dataFilter('edge'), function(e) { return e.id})
       .attr({
         d: function(d) { return getLineCoords(d, currTime); },
       });
@@ -480,7 +544,7 @@ var ndtv_d3 = (function() {
     if (time > maxTime-1) { return; }
     //console.log(currTime + ' '+time+' '+endTime+ ' '+nextTime)
     if(! noUpdate) {
-      slider.value(timeIndex[time].startTime);
+      slider.value(n3._timeIndex[time].startTime);
     }
     duration = duration === undefined ? options.defaultDuration : duration;
     //console.log(duration)
