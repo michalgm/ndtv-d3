@@ -1,7 +1,7 @@
 var ndtv_d3 = (function() {
   var options = {
     defaultDuration: 800, //Duration of each step animation during play or step actions
-    scrubDuration: 10, //Sum duration of all step animations when scrubbing, regardless of # of steps
+    scrubDuration: 100, //Sum duration of all step animations when scrubbing, regardless of # of steps
     edgeTransitionFactor: 0, //fraction (0-1) of total step animation time that edge enter/exit animations should take
     labelOffset: { //offset of labels FIXME
       x: 12,
@@ -77,6 +77,18 @@ var ndtv_d3 = (function() {
 
     var svg = d3.select("#graph")
       .append("svg:svg")
+      .append("defs").append("marker")
+        .attr("id", 'arrowhead')
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 15)
+        .attr("refY", -1.5)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+      .append("svg:path")
+        .attr("d", "M0,-5L10,0L0,5");
+
+    var svg = d3.select('#graph svg')
       .append('g')
       .call(zoom)
 
@@ -132,7 +144,6 @@ var ndtv_d3 = (function() {
     $.get('data/', function(data){
       $('#data_chooser').change(function() {
         var url = $('#data_chooser').val();
-        console.log('hi')
         n3.loadData(url);
         setVidLink(url)
       })
@@ -188,34 +199,16 @@ var ndtv_d3 = (function() {
     time = time || currTime;
     var defaults = {
       'vertex.cex': 1,
-      'vertex.sides': 50
+      'vertex.sides': 50,
+      'vertex.rot': 0,
+      'vertex.col': 'red',
       //'vertex.col': 'inherit'
     }
-    if (timeIndex[time].data[property]) {
+    if (timeIndex[time].data[property] !== undefined) {
       return timeIndex[time].data[property][index];
     } else {
       return defaults[property];
     }
-  }
-  
-  var drawLine = function() {
-    return d3.svg.line()
-      .x(function(d){return d[0];})
-      .y(function(d){return d[1];})
-  }
-
-  var drawPolygon = function(sides, size, centerx, centery) { 
-    var poly = [];
-    var t1 = 2 * Math.PI / sides;
-    var t2 = Math.PI / sides;
-    
-    for (var i = 0; i < sides; i++) {
-        var t = t2 + t1 * i;
-        var x = size* Math.sin(t) + centerx;
-        var y = size * Math.cos(t)+ centery;
-        poly.push([x, y]);
-    }
-    return drawLine()(poly) + 'Z';
   }
 
   //Public Functions
@@ -312,19 +305,67 @@ var ndtv_d3 = (function() {
     var edgeDuration = duration * options.edgeTransitionFactor;
     var nodeDuration = duration * 1-options.edgeTransitionFactor;
 
-    console.log(nodeDuration);
-    console.log(edgeDuration);
-    $('#key').html(timeLookup('xlab', 0))
-    var lines = container.select('#edges').selectAll('line').data(dataFilter('edge'), function(e) { return e.id})
+    var drawLine = function() {
+      return d3.svg.line()
+        .x(function(d){return d[0];})
+        .y(function(d){return d[1];})
+    }
 
-      lines.enter().append('line')
+    var drawPolygon = function(d) { //sides, size, centerx, centery, rotation) { 
+      var sides = timeLookup('vertex.sides', d.id);
+      var radius = timeLookup('vertex.cex', d.id) * baseNodeSize;
+      var coords = timeLookup('coord', d.id);
+      var rot = timeLookup('vertex.rot', d.id)
+
+      var poly = [];
+      var rot = (rotation-45)/360*2*Math.PI
+      var t1 = 2 * Math.PI / sides;
+      var t2 = (Math.PI / sides) + rot;
+      
+      for (var i = 0; i < sides; i++) {
+          var t = t2 + t1 * i;
+          var x = size* Math.sin(t) + xScale(coords[0]);
+          var y = size * Math.cos(t)+ yScale(coords[1]);
+          poly.push([x, y]);
+      }
+      return drawLine()(poly) + 'Z';
+    }
+
+    var getLineCoords = function(d, time) {
+      var coord1 = timeLookup('coord', d.inl[0]-1, time);
+      var coord2 = timeLookup('coord', d.outl[0]-1, time);
+      var x1 = xScale(coord1[0]);
+      var y1 = yScale(coord1[1]);
+      var x2 = xScale(coord2[0]);
+      var y2 = yScale(coord2[1]);
+      var radius = timeLookup('vertex.cex', d.outl[0]-1, time) * baseNodeSize;
+
+      // Determine line lengths
+      var xlen = x2 - x1;
+      var ylen = y2 - y1;
+
+      // Determine hypotenuse length
+      var hlen = Math.sqrt(Math.pow(xlen,2) + Math.pow(ylen,2));
+
+      // Determine the ratio between they shortened value and the full hypotenuse.
+      var ratio = (hlen - radius) / hlen;
+
+      var smallerX = x1 + (xlen * ratio);
+      var smallerY = y1 + (ylen * ratio);
+
+      return 'M '+x1+' '+y1+' L '+smallerX+' '+smallerY;
+    }
+
+    $('#key').html(timeLookup('xlab', 0))
+    var lines = container.select('#edges').selectAll('path').data(dataFilter('edge'), function(e) { return e.id})
+
+      lines.enter().append('path')
         .attr('class', 'edge')
         .attr({
-          x1: function(d, i) { return xScale(timeLookup('coord', d.inl[0]-1, prevTime)[0]); },
-          y1: function(d, i) { return yScale(timeLookup('coord', d.inl[0]-1, prevTime)[1]); },
-          x2: function(d, i) { return xScale(timeLookup('coord', d.outl[0]-1, prevTime)[0]); },
-          y2: function(d, i) { return yScale(timeLookup('coord', d.outl[0]-1, prevTime)[1]); },
-          opacity: 0
+          d: function(d) {return getLineCoords(d, prevTime);  },
+          opacity: 0,
+          "marker-end": "url(#arrowhead)"
+
         })
         .style('stroke', 'green')
         .transition()
@@ -339,11 +380,11 @@ var ndtv_d3 = (function() {
           .delay(edgeDuration)
           .duration(nodeDuration)
           .attr({
-            x1: function(d, i) { return xScale(timeLookup('coord', d.inl[0]-1)[0]); },
-            y1: function(d, i) { return yScale(timeLookup('coord', d.inl[0]-1)[1]); },
-            x2: function(d, i) { return xScale(timeLookup('coord', d.outl[0]-1)[0]); },
-            y2: function(d, i) { return yScale(timeLookup('coord', d.outl[0]-1)[1]); },
-            opacity: 1
+            d: function(d) { return getLineCoords(d, currTime); },
+            opacity: 1,
+          })
+          .each(function(d) { 
+            getLineCoords(d);
           })
           .style('stroke', 'black')
 
@@ -358,14 +399,7 @@ var ndtv_d3 = (function() {
       nodes.enter().append('path')
         .attr({
           class: 'node',
-          d: function(d, i) {
-            var sides = timeLookup('vertex.sides', d.id);
-            var radius = timeLookup('vertex.cex', d.id) * baseNodeSize;
-            var coords = timeLookup('coord', d.id);
-            var x = xScale(coords[0]);
-            var y = yScale(coords[1]);
-            return drawPolygon(sides, radius, x, y)
-          },
+          d: function(d, i) { return drawPolygon(d) },
           //cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
           //cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
           //r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
@@ -382,14 +416,7 @@ var ndtv_d3 = (function() {
         .delay(edgeDuration)
         .duration(nodeDuration)
         .attr({
-          d: function(d, i) {
-            var sides = timeLookup('vertex.sides', d.id);
-            var radius = timeLookup('vertex.cex', d.id) * baseNodeSize;
-            var coords = timeLookup('coord', d.id);
-            var x = xScale(coords[0]);
-            var y = yScale(coords[1]);
-            return drawPolygon(sides, radius, x, y)
-          },
+          d: function(d, i) { return drawPolygon(d) },
           // cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
           // cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
           // r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
@@ -423,7 +450,7 @@ var ndtv_d3 = (function() {
           y: function(d, i) { return yScale(timeLookup('coord', d.id)[1])+options.labelOffset.y; },
           opacity: 1
         })
-        .text(function(d, i) { return timeLookup('label', d.id); })
+        .text(function(d, i) { return timeLookup('label', d.id) + d.id; })
 
       labels.exit().remove();
   }
@@ -432,22 +459,12 @@ var ndtv_d3 = (function() {
     initScales();
     var lines = container.select('#edges').selectAll('line').data(dataFilter('edge'), function(e) { return e.id})
       .attr({
-        x1: function(d, i) { return xScale(timeLookup('coord', d.inl[0]-1)[0]); },
-        y1: function(d, i) { return yScale(timeLookup('coord', d.inl[0]-1)[1]); },
-        x2: function(d, i) { return xScale(timeLookup('coord', d.outl[0]-1)[0]); },
-        y2: function(d, i) { return yScale(timeLookup('coord', d.outl[0]-1)[1]); },
+        d: function(d) { return getLineCoords(d, currTime); },
       });
 
     var nodes = container.select('#nodes').selectAll('.node').data(dataFilter('node'), function(e) { return e.id})
       .attr({
-        d: function(d, i) {
-          var sides = timeLookup('vertex.sides', d.id);
-          var radius = timeLookup('vertex.cex', d.id) * baseNodeSize;
-          var coords = timeLookup('coord', d.id);
-          var x = xScale(coords[0]);
-          var y = yScale(coords[1]);
-          return drawPolygon(sides, radius, x, y)
-        }
+        d: function(d, i) { return drawPolygon(d) },
       });
 
     var labels = container.select('#labels').selectAll('text').data(dataFilter('node'), function(e) { return e.id})

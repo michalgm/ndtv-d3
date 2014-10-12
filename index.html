@@ -34,20 +34,23 @@
       $(function() {
         var options = {
           dataChooser: true,
-          initialDataUrl: 'data/msmSim.json',
+          initialDataUrl: 'data/shortStergm.json',
           defaultDuration: 2000
         }
         var graph = new ndtv_d3(options);
-        
-      /*  var drawLine = function() {
+    /*    
+        var drawLine = function() {
           return d3.svg.line()
             .x(function(d){return d[0];})
             .y(function(d){return d[1];})
         }
-        var drawPolygon = function(sides, size, centerx, centery) { 
+        var drawPolygon = function(sides, size, centerx, centery, rotation) { 
           var poly = [];
+          rotation = 0//rotation === undefined ? 60 : rotation;
+          var rot = (rotation-90)/360*2*Math.PI
+          console.log(rotation/360*2*Math.PI)
           var t1 = 2 * Math.PI / sides;
-          var t2 = Math.PI / sides;
+          var t2 = (Math.PI / sides) + rot//(360/rotation*2*Math.PI);
           
           for (var i = 0; i < sides; i++) {
               var t = t2 + t1 * i;
@@ -65,14 +68,14 @@
             fill: '#fff',
             stroke: '#000',
             opacity: 1,
-            d: function() {return drawPolygon(50, 100, 300, 400); }
+            d: function() {return drawPolygon(50, 8, 300, 400); }
           })
         for(var i = 8; i >2; i--) {
           d3.select('#container').append('path')
             .attr({
               fill: colors(i*20),
               opacity: opacity,
-              d: function() {return drawPolygon(i, 100, 300, 400); }
+              d: function() {return drawPolygon(i, 50, 300, 400); }
             })
         }
         d3.select('#container').append('circle')
@@ -81,7 +84,7 @@
             cy: 400,
             r: 10,
             fill: '#000'
-          })
+          })*/
 /*        d3.select('#container').selectAll('path.circle')
         .transition()
         .delay(2000)
