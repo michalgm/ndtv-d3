@@ -80,10 +80,11 @@ var ndtv_d3 = (function() {
       .append("defs").append("marker")
         .attr("id", 'arrowhead')
         .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 15)
-        .attr("refY", -1.5)
+        .attr("refX", 7)
+        .attr("refY", 0)
         .attr("markerWidth", 6)
         .attr("markerHeight", 6)
+        .attr("markerUnits", "strokeWidth")
         .attr("orient", "auto")
       .append("svg:path")
         .attr("d", "M0,-5L10,0L0,5");
@@ -313,9 +314,9 @@ var ndtv_d3 = (function() {
 
     var drawPolygon = function(d) { //sides, size, centerx, centery, rotation) { 
       var sides = timeLookup('vertex.sides', d.id);
-      var radius = timeLookup('vertex.cex', d.id) * baseNodeSize;
+      var size = timeLookup('vertex.cex', d.id) * baseNodeSize;
       var coords = timeLookup('coord', d.id);
-      var rot = timeLookup('vertex.rot', d.id)
+      var rotation = timeLookup('vertex.rot', d.id)
 
       var poly = [];
       var rot = (rotation-45)/360*2*Math.PI
@@ -338,7 +339,7 @@ var ndtv_d3 = (function() {
       var y1 = yScale(coord1[1]);
       var x2 = xScale(coord2[0]);
       var y2 = yScale(coord2[1]);
-      var radius = timeLookup('vertex.cex', d.outl[0]-1, time) * baseNodeSize;
+      var radius = timeLookup('vertex.cex', d.outl[0]-1, time) * baseNodeSize + 2;
 
       // Determine line lengths
       var xlen = x2 - x1;
