@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <link rel='stylesheet' href='d3.slider/d3.slider.css'/>
+    <link rel='stylesheet' href='lib/d3.slider.css'/>
     <link rel='stylesheet' href='styles.css'/>
     <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
   </head>
@@ -28,14 +28,15 @@
     </div>
     <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-    <script src="d3.slider/d3.slider.js"></script>
+    <script src="lib/d3.slider.js"></script>
     <script src="ndtv-d3.js"></script>
     <script>
       $(function() {
         var options = {
           dataChooser: true,
-          initialDataUrl: 'data/shortStergm.json',
-          defaultDuration: 800
+          initialDataUrl: 'data/windsurfers.json',
+          //defaultDuration: 3000,
+          //edgeTransitionFactor: .4
         }
         graph = new ndtv_d3(options);
     /*    

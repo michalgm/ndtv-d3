@@ -193,6 +193,7 @@ var ndtv_d3 = (function() {
       return n3._timeIndex[time].data[property][index];
     } else {
       if (property == 'coord') {
+        console.log(graph.val[index].active)
         console.log(index)
         console.log(time)
       }
@@ -297,19 +298,22 @@ var ndtv_d3 = (function() {
       var i = 0;
 
       var checkInterval = function(start, end, slice) {
-        $.each(slice, function(i, num){
-          if (num == 'Inf') { slice[i] = Infinity; }
-          if (num == '-Inf') { slice[i] = -Infinity; }
-        })
-
-        if (
-          (slice[0] < end && slice[1] > start) ||
-          (start == end)
-        ) {
-          return true;
+        if (start == end ) {
+          return true; 
         } else {
-          return false;
+          $.each(slice, function(i, num){
+            if (num == 'Inf') { slice[i] = Infinity; }
+            if (num == '-Inf') { slice[i] = -Infinity; }
+          })
+
+          if (
+            (end > slice[0] && start < slice[1])
+            //(slice[0] < end && slice[1] > start)
+          ) {
+            return true;
+          }
         }
+        return false;
       }
       window.check = checkInterval;
 
@@ -396,9 +400,10 @@ var ndtv_d3 = (function() {
 
       slider = d3.slider().axis(true).step(interval);
       slider.min(minTime)
-      slider.max(maxTime-interval)
+      slider.max(maxTime-interval+sliceInfo['aggregate.dur'][0])
       slider.animate(options.defaultDuration)
       slider.value(minTime)
+      slider.interval(sliceInfo['aggregate.dur'][0])
       slider.on('slide', function(ext, value) {
         n3.endAnimation();
         var duration = options.scrubDuration/Math.abs(currTime-value);
@@ -436,29 +441,25 @@ var ndtv_d3 = (function() {
         .transition()
         .duration(edgeDuration)
         .attr({opacity: 1})
-        // .transition()
-        // .delay(duration*0.45)
-        // .duration(0)
-        // .style('stroke', 'black')
-
-      lines.transition()
-        .delay(edgeDuration)
-        .duration(nodeDuration)
-        .attr({
-          d: function(d) { return getLineCoords(d, currTime); },
-          opacity: 1,
-        })
-        .each(function(d) { 
-          getLineCoords(d);
-        })
-        .style('stroke', 'black')
-
+       
+      // lines.transition()
+      //   .delay(edgeDuration-6)
+      //   .duration(0)
       lines.exit()
         .style('stroke', 'red')
         .transition()
         .duration(edgeDuration)
         .attr('opacity', 0)          
         .remove();
+
+      lines.transition()
+        .delay(edgeDuration)
+        .duration(nodeDuration)
+        .attr({
+          d: function(d) { return getLineCoords(d, currTime); },
+          opacity: 1
+        })
+        .style('stroke', 'black')
 
     var nodes = container.select('#nodes').selectAll('.node').data(dataFilter('node'), function(e) { return e.id});
       nodes.enter().append('path')
@@ -506,6 +507,9 @@ var ndtv_d3 = (function() {
           opacity: 0
         })
         .text(function(d, i) { return timeLookup('label', d.id); })
+        .transition()
+        .duration(edgeDuration)
+        .attr('opacity', 1)
 
       labels.transition().filter(function(d) { return timeLookup('displaylabels', 0) !== false})
         .delay(edgeDuration)
@@ -517,7 +521,11 @@ var ndtv_d3 = (function() {
         })
         .text(function(d, i) { return timeLookup('label', d.id); })
 
-      labels.exit().remove();
+      labels.exit()
+        .transition()
+        .duration(edgeDuration)
+        .attr('opacity', 0)
+        .remove();
   }
 
   n3.resizeGraph = function() {
@@ -537,6 +545,9 @@ var ndtv_d3 = (function() {
         x: function(d, i) { return xScale(timeLookup('coord', d.id)[0])+options.labelOffset.x; },
         y: function(d, i) { return yScale(timeLookup('coord', d.id)[1])+options.labelOffset.y; },
       })
+    $('#slider').html('');
+    d3.select('#slider').call(slider);
+
   }
 
   n3.animateGraph = function(time, endTime, duration, noUpdate) {
