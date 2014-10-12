@@ -197,7 +197,7 @@ var ndtv_d3 = (function() {
   }
 
   var timeLookup = function(property, index, time) {
-    time = time || currTime;
+    time = time === undefined ? currTime : time;
     var defaults = {
       'vertex.cex': 1,
       'vertex.sides': 50,
@@ -491,7 +491,7 @@ var ndtv_d3 = (function() {
 
     prevTime = currTime;
     currTime = time == currTime ? nextTime : time;
-    //console.log(currTime + ' '+time+' '+endTime+ ' '+nextTime)
+    //console.log(currTime + ' '+time+' '+endTime+ ' '+nextTime+ ' '+prevTime)
     n3.drawGraph(duration);
     if (currTime != endTime) {
       animate = setTimeout(function(){
