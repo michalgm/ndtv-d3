@@ -2,6 +2,7 @@ var ndtv_d3 = (function() {
   var options = {
     defaultDuration: 800, //Duration of each step animation during play or step actions
     scrubDuration: 10, //Sum duration of all step animations when scrubbing, regardless of # of steps
+    edgeTransitionFactor: 0, //fraction (0-1) of total step animation time that edge enter/exit animations should take
     labelOffset: { //offset of labels FIXME
       x: 12,
       y: 0
@@ -125,7 +126,7 @@ var ndtv_d3 = (function() {
 
   function createDataChooser() {
     var setVidLink = function(url) {
-      $('#video_link').attr('href', 'data/'+url.replace('.json', '.mp4'))
+      $('#video_link').attr('href', url.replace('.json', '.mp4'))
     }
     $('body').append($("<div id='data_chooser_container'></div>").append("<select id='data_chooser'/>").append("<a id='video_link' target='_blank'>Video</a>"));
     $.get('data/', function(data){
@@ -187,6 +188,7 @@ var ndtv_d3 = (function() {
     time = time || currTime;
     var defaults = {
       'vertex.cex': 1,
+      'vertex.sides': 50
       //'vertex.col': 'inherit'
     }
     if (timeIndex[time].data[property]) {
@@ -196,9 +198,30 @@ var ndtv_d3 = (function() {
     }
   }
   
+  var drawLine = function() {
+    return d3.svg.line()
+      .x(function(d){return d[0];})
+      .y(function(d){return d[1];})
+  }
+
+  var drawPolygon = function(sides, size, centerx, centery) { 
+    var poly = [];
+    var t1 = 2 * Math.PI / sides;
+    var t2 = Math.PI / sides;
+    
+    for (var i = 0; i < sides; i++) {
+        var t = t2 + t1 * i;
+        var x = size* Math.sin(t) + centerx;
+        var y = size * Math.cos(t)+ centery;
+        poly.push([x, y]);
+    }
+    return drawLine()(poly) + 'Z';
+  }
+
   //Public Functions
 
   n3.loadData = function(url) {
+    n3.endAnimation();
     currTime = 0;
     prevTime = 0;
     $.getJSON(url, function(data) {
@@ -286,6 +309,11 @@ var ndtv_d3 = (function() {
 
   n3.drawGraph = function(duration) {
 
+    var edgeDuration = duration * options.edgeTransitionFactor;
+    var nodeDuration = duration * 1-options.edgeTransitionFactor;
+
+    console.log(nodeDuration);
+    console.log(edgeDuration);
     $('#key').html(timeLookup('xlab', 0))
     var lines = container.select('#edges').selectAll('line').data(dataFilter('edge'), function(e) { return e.id})
 
@@ -300,7 +328,7 @@ var ndtv_d3 = (function() {
         })
         .style('stroke', 'green')
         .transition()
-        .duration(duration*0.45)
+        .duration(edgeDuration)
         .attr({opacity: 1})
         // .transition()
         // .delay(duration*0.45)
@@ -308,54 +336,72 @@ var ndtv_d3 = (function() {
         // .style('stroke', 'black')
 
         lines.transition()
-          .delay(duration/2)
-          .duration(duration/2)
+          .delay(edgeDuration)
+          .duration(nodeDuration)
           .attr({
             x1: function(d, i) { return xScale(timeLookup('coord', d.inl[0]-1)[0]); },
             y1: function(d, i) { return yScale(timeLookup('coord', d.inl[0]-1)[1]); },
             x2: function(d, i) { return xScale(timeLookup('coord', d.outl[0]-1)[0]); },
             y2: function(d, i) { return yScale(timeLookup('coord', d.outl[0]-1)[1]); },
+            opacity: 1
           })
           .style('stroke', 'black')
 
       lines.exit()
         .style('stroke', 'red')
         .transition()
-        .duration(duration/2)
+        .duration(edgeDuration)
         .attr('opacity', 0)          
         .remove();
 
-    var circles = container.select('#nodes').selectAll('circle').data(dataFilter('node'), function(e) { return e.id});
-      circles.enter().append('circle')
+    var nodes = container.select('#nodes').selectAll('.node').data(dataFilter('node'), function(e) { return e.id});
+      nodes.enter().append('path')
         .attr({
           class: 'node',
-          cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
-          cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
-          r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
+          d: function(d, i) {
+            var sides = timeLookup('vertex.sides', d.id);
+            var radius = timeLookup('vertex.cex', d.id) * baseNodeSize;
+            var coords = timeLookup('coord', d.id);
+            var x = xScale(coords[0]);
+            var y = yScale(coords[1]);
+            return drawPolygon(sides, radius, x, y)
+          },
+          //cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
+          //cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
+          //r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
           opacity: 0,
         })
+        .style('fill', function(d, i) {
+          return timeLookup('vertex.col', d.id);
+        })
         .transition()
-        .duration(duration/2)
+        .duration(edgeDuration)
         .attr('opacity', 1)
-        .style('fill', function(d, i) {
-          return timeLookup('vertex.col', i);
-        })
 
-      circles.transition()
-        .delay(duration/2)
-        .duration(duration/2)
+      nodes.transition()
+        .delay(edgeDuration)
+        .duration(nodeDuration)
         .attr({
-          cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
-          cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
-          r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
+          d: function(d, i) {
+            var sides = timeLookup('vertex.sides', d.id);
+            var radius = timeLookup('vertex.cex', d.id) * baseNodeSize;
+            var coords = timeLookup('coord', d.id);
+            var x = xScale(coords[0]);
+            var y = yScale(coords[1]);
+            return drawPolygon(sides, radius, x, y)
+          },
+          // cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
+          // cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
+          // r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
+          opacity: 1
         })
         .style('fill', function(d, i) {
-          return timeLookup('vertex.col', i);
+          return timeLookup('vertex.col', d.id);
         })
 
-      circles.exit()
+      nodes.exit()
         .transition()
-        .duration(duration*.4)
+        .duration(edgeDuration)
         .attr('opacity', 0)
         .remove();
 
@@ -363,21 +409,21 @@ var ndtv_d3 = (function() {
       labels.enter().append('text').filter(function(d) { return timeLookup('displaylabels', 0)})
         .attr({
           class: 'label',
-          x: function(d, i) { return xScale(timeLookup('coord', i)[0])+options.labelOffset.x; },
-          y: function(d, i) { return yScale(timeLookup('coord', i)[1])+options.labelOffset.y; },
+          x: function(d, i) { return xScale(timeLookup('coord', d.id)[0])+options.labelOffset.x; },
+          y: function(d, i) { return yScale(timeLookup('coord', d.id)[1])+options.labelOffset.y; },
           opacity: 0
         })
-        .text(function(d, i) { return timeLookup('label', i); })
+        .text(function(d, i) { return timeLookup('label', d.id); })
 
       labels.transition().filter(function(d) { return timeLookup('displaylabels', 0) !== false})
-        .delay(duration/2)
-        .duration(duration/2)
+        .delay(edgeDuration)
+        .duration(nodeDuration)
         .attr({
-          x: function(d, i) { return xScale(timeLookup('coord', i)[0])+options.labelOffset.x; },
-          y: function(d, i) { return yScale(timeLookup('coord', i)[1])+options.labelOffset.y; },
+          x: function(d, i) { return xScale(timeLookup('coord', d.id)[0])+options.labelOffset.x; },
+          y: function(d, i) { return yScale(timeLookup('coord', d.id)[1])+options.labelOffset.y; },
           opacity: 1
         })
-        .text(function(d, i) { return timeLookup('label', i); })
+        .text(function(d, i) { return timeLookup('label', d.id); })
 
       labels.exit().remove();
   }
@@ -392,17 +438,22 @@ var ndtv_d3 = (function() {
         y2: function(d, i) { return yScale(timeLookup('coord', d.outl[0]-1)[1]); },
       });
 
-    var circles = container.select('#nodes').selectAll('circle').data(dataFilter('node'), function(e) { return e.id})
+    var nodes = container.select('#nodes').selectAll('.node').data(dataFilter('node'), function(e) { return e.id})
       .attr({
-        cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
-        cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
-        r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
+        d: function(d, i) {
+          var sides = timeLookup('vertex.sides', d.id);
+          var radius = timeLookup('vertex.cex', d.id) * baseNodeSize;
+          var coords = timeLookup('coord', d.id);
+          var x = xScale(coords[0]);
+          var y = yScale(coords[1]);
+          return drawPolygon(sides, radius, x, y)
+        }
       });
 
     var labels = container.select('#labels').selectAll('text').data(dataFilter('node'), function(e) { return e.id})
       .attr({
-        x: function(d, i) { return xScale(timeLookup('coord', i)[0])+options.labelOffset.x; },
-        y: function(d, i) { return yScale(timeLookup('coord', i)[1])+options.labelOffset.y; },
+        x: function(d, i) { return xScale(timeLookup('coord', d.id)[0])+options.labelOffset.x; },
+        y: function(d, i) { return yScale(timeLookup('coord', d.id)[1])+options.labelOffset.y; },
       })
   }
 
