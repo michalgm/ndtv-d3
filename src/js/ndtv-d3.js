@@ -8,7 +8,9 @@
   var n3 = function(opts, target) {
     var _this = this;
     $.extend(true, this.options, opts); //replace defaults with user-specified n3.options
-    if (!target) { target = 'body'; }
+    if (!target) {
+      target = d3.select('body').append('div').style({width: '100%', height: '100%'}).node();
+    }
     this.domTarget = d3.select(target);
     this.domTarget.classed({'ndtv-d3-container': true});
     this.SVGSetup();
@@ -230,23 +232,61 @@
   n3.prototype.timeLookup = function(property, index, time) {
     var n3 = this;
     time = time === undefined ? n3.currTime : time;
-    var defaults = {
-      'vertex.cex': 1,
-      'vertex.sides': 50,
-      'vertex.rot': 0,
-      'vertex.col': 'red',
-      //'vertex.col': 'inherit'
+    
+    var data = n3.timeIndex[time].data;
+    var properties = {
+      'xlab': {
+        type: 'graph',
+      },
+      'displaylabels': {
+        type:  'graph'
+      },
+      'coord': { 
+        type:  'node'
+      },
+      'vertex.cex': {
+        type:  'node',
+        default: 1
+      },
+      'label': { 
+        type:  'node'
+      },
+      'vertex.col': { 
+        type:  'node',
+        default: 'red'
+      },
+      'vertex.sides': { 
+        type:  'node',
+        default: 50
+      },
+      'vertex.rot': { 
+        type:  'node',
+        default: 0
+      },
     }
-    if (n3.timeIndex[time].data[property] !== undefined && n3.timeIndex[time].data[property][index] !== undefined) {
-      return n3.timeIndex[time].data[property][index];
-    } else {
-      if (property == 'coord') {
-        console.log(n3.graph.val[index].active)
-        console.log('missing coordinates for node '+index+ ' at time '+time+' ('+n3.timeIndex[time].start+'-'+n3.timeIndex[time].end+')');
-        console.log('valid time slices for node '+index+' are '+n3.graph.val[index].active.join(','))
+
+    var type = properties[property].type;
+    var value = properties[property].default;
+
+    if (data[property] !== undefined) {
+      if (type == 'graph') {
+        if (data[property] !== undefined) {
+          value = data[property];
+        }
+      } else {
+        var lookup = data.active[type+'s'][index];
+        if (lookup === undefined) {
+          console.log('attempting to access property '+property+ ' for inactive '+type+' id '+index);
+          if (property == 'coord') {
+            console.log('missing coordinates for node '+index+ ' at time '+time+' ('+n3.timeIndex[time].start+'-'+n3.timeIndex[time].end+')');
+            console.log('valid time slices for node '+index+' are '+n3.graph.val[index].active.join(','))
+          }
+        } else if (data[property][lookup] !== undefined) {
+          value = data[property][lookup];
+        }
       }
-      return defaults[property];
     }
+    return value;
   }
 
   var drawLine = function() {
@@ -282,16 +322,16 @@
     var time1 = time; 
     var time2 = time;
     if (time == n3.prevTime) {
-      if (! n3.timeIndex[time].data.active.nodes[d.inl[0]-1]) { time1 = n3.currTime; }
-      if (! n3.timeIndex[time].data.active.nodes[d.outl[0]-1]) { time2 = n3.currTime; }
+      if (! n3.timeIndex[time].data.active.nodes[d.inl[0]]) { time1 = n3.currTime; }
+      if (! n3.timeIndex[time].data.active.nodes[d.outl[0]]) { time2 = n3.currTime; }
     }
-    var coord1 = n3.timeLookup('coord', d.inl[0]-1, time1);
-    var coord2 = n3.timeLookup('coord', d.outl[0]-1, time2);
+    var coord1 = n3.timeLookup('coord', d.inl[0], time1);
+    var coord2 = n3.timeLookup('coord', d.outl[0], time2);
     var x1 = n3.xScale(coord1[0]);
     var y1 = n3.yScale(coord1[1]);
     var x2 = n3.xScale(coord2[0]);
     var y2 = n3.yScale(coord2[1]);
-    var radius = n3.timeLookup('vertex.cex', d.outl[0]-1, time) * n3.baseNodeSize + 2;
+    var radius = n3.timeLookup('vertex.cex', d.outl[0], time) * n3.baseNodeSize + 2;
 
     // Determine line lengths
     var xlen = x2 - x1;
@@ -332,12 +372,12 @@
 
       $.each(n3.nodes, function(i, n) {
         if (! $.isEmptyObject(n)) {
-          n.id = i;
+          n.id = i+1;
         }
       })
       $.each(n3.edges, function(i, e) {
         if (! $.isEmptyObject(e)) {
-          e.id = i;
+          e.id = i+1;
         }
       })
       var sliceInfo = n3.graph.gal['slice.par'];
