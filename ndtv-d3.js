@@ -39,26 +39,27 @@
     timeIndex:null,
     domTarget:null,
     slider:null,
-    options: {
-      defaultDuration: 800, //Duration of each step animation during play or step actions
-      scrubDuration: 100, //Sum duration of all step animations when scrubbing, regardless of # of steps
-      edgeTransitionFactor: 0, //fraction (0-1) of total step animation time that edge enter/exit animations should take
-      labelOffset: { //offset of labels FIXME
-        x: 12,
-        y: 0
-      },
-      nodeSizeFactor: 100, //sets default node size, as viewport / nodeSizeFactor
-      dataChooser: false, //show a select box for choosing different graphs?
-      dataChooserDir: 'data/', //web path to dir containing data json files
-      playControls: true, //show the player controls
-      slider: true, //show the slider control
-      animateOnLoad: false, //play the n3.graph animation on page load
-      margin: { //svg margins - may be overridden when setting fixed aspect ratio
-        x: 20,
-        y: 10
-      },
-      initialDataUrl: null,
-    }
+  };
+  
+  n3.prototype.options = {
+    defaultDuration: 800, //Duration of each step animation during play or step actions
+    scrubDuration: 100, //Sum duration of all step animations when scrubbing, regardless of # of steps
+    edgeTransitionFactor: 0, //fraction (0-1) of total step animation time that edge enter/exit animations should take
+    labelOffset: { //offset of labels FIXME
+      x: 12,
+      y: 0
+    },
+    nodeSizeFactor: 100, //sets default node size, as viewport / nodeSizeFactor
+    dataChooser: false, //show a select box for choosing different graphs?
+    dataChooserDir: 'data/', //web path to dir containing data json files
+    playControls: true, //show the player controls
+    slider: true, //show the slider control
+    animateOnLoad: false, //play the n3.graph animation on page load
+    margin: { //svg margins - may be overridden when setting fixed aspect ratio
+      x: 20,
+      y: 10
+    },
+    initialDataUrl: null,
   };
 
   n3.prototype.SVGSetup = function() {
@@ -118,7 +119,7 @@
       .call(zoom)
 
     var rect = svg.append("rect")
-      .attr('id', 'background')
+      .attr('class', 'background')
       .style("fill", "none")
       .style("pointer-events", "all");
 
@@ -154,11 +155,13 @@
       .attr("transform", "translate(" + n3.options.margin.x + "," + n3.options.margin.y + ")");
 
     n3.xScale = d3.scale.linear()
-      .domain([n3.graph.gal['xlim.active'][0][0].xlim[0],n3.graph.gal['xlim.active'][0][0].xlim[1]])
+      .domain([n3.timeIndex[0].data.xlim[0],n3.timeIndex[0].data.xlim[1]])
+//      .domain([n3.graph.gal['xlim.active'][0][0].xlim[0],n3.graph.gal['xlim.active'][0][0].xlim[1]])
       .range([0, width]);
 
     n3.yScale = d3.scale.linear()
-      .domain([n3.graph.gal['ylim.active'][0][0].ylim[0],n3.graph.gal['ylim.active'][0][0].ylim[1]])
+      .domain([n3.timeIndex[0].data.ylim[0],n3.timeIndex[0].data.ylim[1]])
+      //.domain([n3.graph.gal['ylim.active'][0][0].ylim[0],n3.graph.gal['ylim.active'][0][0].ylim[1]])
       .range([height, 0]);
   }
 
@@ -182,7 +185,7 @@
       $.each(matches, function(i, m) {
         var url = m.match(/href="([^"]*)"/)[1];
         if (url.match(/.json$/)) {
-          div.select('.data_chooser').append('option').html("data/"+url)
+          div.select('.data_chooser').append('option').attr('value', "data/"+url).html(url);
         }
         if (i == 1) {
           setVidLink(url);
@@ -312,9 +315,11 @@
     n3.prevTime = 0;
     $.getJSON(url, function(data) {
       console.time('loadData');
-      n3.graph = data;
+      n3.graph = data.network;
+      n3.timeIndex = data.render;
       if (n3.options.dataChooser) {
-        $(n3.domTarget.select('.data_chooser')).val(url);
+        $(n3.domTarget.select('.data_chooser').node()).val(url);
+        n3.domTarget.select('.video_link').attr('href', url.replace('.json', '.mp4'))
       }
       n3.container.select('.edges').selectAll('*').remove();
       n3.container.select('.labels').selectAll('*').remove();
@@ -334,13 +339,17 @@
           e.id = i;
         }
       })
-
       var sliceInfo = n3.graph.gal['slice.par'];
+      
       n3.minTime = sliceInfo.start[0];
       n3.maxTime = sliceInfo.end[0];
       n3.interval = sliceInfo.interval[0];
-
       var valIndex = {};
+      $.each(n3.timeIndex, function(i, t){
+        valIndex[t.start] = i;
+      })      
+      /*
+
       n3.timeIndex = [];
       var i = 0;
 
@@ -439,7 +448,7 @@
         valIndex[t] = i;
         i++;
       }
-
+      */
       if(n3.options.slider) {
         var sliderDiv = n3.domTarget.select('.slider');
 
@@ -624,7 +633,7 @@
     n3.currTime = time == n3.currTime ? nextTime : time;
     //console.log(n3.currTime + ' '+time+' '+endTime+ ' '+nextTime+ ' '+n3.prevTime)
     if(! noUpdate && n3.options.slider) {
-      n3.slider.value(n3.timeIndex[n3.currTime].startTime);
+      n3.slider.value(n3.timeIndex[n3.currTime].start);
     }
     n3.drawGraph(duration);
     if (n3.currTime != endTime) {
