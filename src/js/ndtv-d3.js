@@ -229,6 +229,8 @@
     });
   }
 
+  var colorScale =  d3.scale.category20();
+
   n3.prototype.timeLookup = function(property, index, time) {
     var n3 = this;
     time = time === undefined ? n3.currTime : time;
@@ -240,6 +242,10 @@
       },
       'displaylabels': {
         type:  'graph'
+      },
+      'bg' : {
+        type: 'graph',
+        default: colorScale(time)
       },
       'coord': { 
         type:  'node'
@@ -548,7 +554,11 @@
     var edgeDuration = duration * n3.options.edgeTransitionFactor;
     var nodeDuration = duration * 1-n3.options.edgeTransitionFactor;
 
-    n3.domTarget.select('.key').html(n3.timeLookup('xlab', 0))
+    n3.domTarget.select('.key').html(n3.timeLookup('xlab', 0));
+    n3.domTarget.select('.background').transition()
+      .duration(duration)
+      .style({fill: n3.timeLookup('bg')});
+
     var lines = n3.container.select('.edges').selectAll('.edge').data(n3.dataFilter('edge'), function(e) { return e.id})
       lines.enter().append('path')
         .attr('class', 'edge')
