@@ -3,6 +3,8 @@
 # changes to the export script
 library(ndtv)
 
+saveVideo=TRUE  # should video versions of the json files be rendered for debugging? (slower)
+
 # delete the various movie files so that they can be overwritten
 unlink('js/ndtv-d3/data/shortStergm.mp4')
 unlink('js/ndtv-d3/data/msmSim.mp4')
@@ -18,10 +20,13 @@ render.d3movie(short.stergm.sim,filename='js/ndtv-d3/data/shortStergm.json',
                vertex.col=function(slice,onset){rgb(((slice%v%'wealth')/146),0.5,0.5)},
                vertex.cex=function(slice,onset){slice%v%'wealth'/100+onset},
                render.par=list(show.stats="~edges+gwesp(0,fixed=TRUE)"))
+
+if(saveVideo){
 saveVideo(render.animation(short.stergm.sim,
                vertex.col=function(slice,onset){rgb(((slice%v%'wealth')/146),0.5,0.5)},
                vertex.cex=function(slice,onset){slice%v%'wealth'/100+onset},
                render.par=list(show.stats="~edges+gwesp(0,fixed=TRUE)"),render.cache='none'),video.name='js/ndtv-d3/data/shortStergm.mp4')
+}
 
 # msm.sim is a much larger network
 # but still has static attributes
@@ -34,7 +39,7 @@ render.d3movie(msm.sim,filename='js/ndtv-d3/data/msmSim.json',
                vertex.cex=function(slice){sapply(1:network.size(slice),function(v){0.1+length(get.edgeIDs(slice,v))/2})}, # change sizes in proportion to number of edges
                displaylabels=FALSE  # don't show labels
                )
-
+if (saveVideo){
 saveVideo(render.animation(msm.sim,
                 vertex.sides=ifelse(msm.sim%v%'race'==1,3,4),  # change shape based on race
                 edge.lwd=function(slice){runif(network.edgecount(slice),0.5,5)},# change edge width randomly
@@ -43,7 +48,7 @@ saveVideo(render.animation(msm.sim,
                 displaylabels=FALSE,  # don't show labels
                 render.cache = 'none'),
           video.name ='js/ndtv-d3/data/msmSim.mp4')
-
+}
 
 # example including vertex activity
 # layout calculated with mdsj
@@ -51,14 +56,6 @@ saveVideo(render.animation(msm.sim,
 data(windsurfers)
 slice.par<-list(start=0,end=24,interval=1,aggregate.dur=7,rule="latest")
 windsurfers<-compute.animation(windsurfers,slice.par=slice.par, default.dist=3, animation.mode='MDSJ')
-saveVideo(render.animation(windsurfers,
-                           vertex.col="group1", 
-                           edge.col="darkgray",
-                           displaylabels=TRUE,
-                           label.cex=.6,
-                           label.col="blue",
-                           main="Freeman's windsurfer contact network\nwith 7 day aggregation",
-                           render.cache='none'),video.name='js/ndtv-d3/data/windsurfers.mp4')
 render.d3movie(windsurfers,
                vertex.col="group1", 
                edge.col="darkgray",
@@ -68,6 +65,16 @@ render.d3movie(windsurfers,
                main="Freeman's windsurfer contact network\nwith 7 day aggregation",
                bg='yellow',
                filename='js/ndtv-d3/data/windsurfers.json')
+if(saveVideo){
+saveVideo(render.animation(windsurfers,
+                           vertex.col="group1", 
+                           edge.col="darkgray",
+                           displaylabels=TRUE,
+                           label.cex=.6,
+                           label.col="blue",
+                           main="Freeman's windsurfer contact network\nwith 7 day aggregation",
+                           render.cache='none'),video.name='js/ndtv-d3/data/windsurfers.mp4')
+}
 
 # example including html classes
 
