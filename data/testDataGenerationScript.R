@@ -3,6 +3,10 @@
 # changes to the export script
 library(ndtv)
 
+# delete the various movie files so that they can be overwritten
+unlink('js/ndtv-d3/data/shortStergm.mp4')
+unlink('js/ndtv-d3/data/msmSim.mp4')
+unlink('js/ndtv-d3/data/windsurfers.json')
 
 # this renders out a version of the 'flo-marriage' short.stergm.sim object
 # added some arbitrary vertex attribute transformations to make it useful
