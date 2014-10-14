@@ -199,11 +199,11 @@
 
     var div = n3.domTarget.select('.controls').append('div').attr('class', 'play-control-container');
     div.html(
-      "<i class='step-back-control fa fa-step-backward fa-2x'></i>"+
-      "<i class='play-back-control fa fa-play fa-flip-horizontal fa-2x'></i>"+
-      "<i class='pause-control fa fa-pause fa-2x'></i>"+
-      "<i class='play-forward-control fa fa-play fa-2x'></i>"+
-      "<i class='step-forward-control fa fa-step-forward fa-2x'></i>"
+      "<div><svg class='icon step-back-control' viewBox='0 0 32 32'><use xlink:href='#icon-first'></use></svg></div>"+
+      "<div><svg class='icon play-back-control' viewBox='0 0 32 32'><g transform='rotate(180, 16, 16)'><use xlink:href='#icon-play'></use></g></svg></div>"+
+      "<div><svg class='icon pause-control' viewBox='0 0 32 32'><use xlink:href='#icon-pause'></use></svg></div>"+
+      "<div><svg class='icon play-forward-control' viewBox='0 0 32 32'><use xlink:href='#icon-play'></use></svg></div>"+
+      "<div><svg class='icon step-forward-control' viewBox='0 0 32 32'><g transform='rotate(180, 16, 16)'><use xlink:href='#icon-first'></use></g></svg></div>"
     );
 
     div.select('.step-back-control').on('click', function() { n3.animateGraph(n3.currTime-1, n3.currTime-1); });
