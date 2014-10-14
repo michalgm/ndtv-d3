@@ -14,6 +14,8 @@
     <script src="../src/js/ndtv-d3.js"></script>
     <script>
 	     $(function() {
+          d3.selectAll('html, body').classed({'ndtv-fullscreen': true})
+
           var options = {
             dataChooser: true,
             graphData: 'data/windsurfers.json',

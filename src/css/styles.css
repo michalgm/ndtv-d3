@@ -1,4 +1,4 @@
-body, html { 
+.ndtv-fullscreen { 
   padding: 0;
   margin: 0;
   width: 100%;
@@ -7,6 +7,10 @@ body, html {
 
 .label {
   font-family: 'Ubuntu'
+}
+
+.dragging {
+  cursor: move;
 }
 
 .node {

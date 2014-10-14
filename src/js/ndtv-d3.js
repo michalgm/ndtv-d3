@@ -10,6 +10,7 @@
     $.extend(true, this.options, opts); //replace defaults with user-specified n3.options
     if (!target) {
       target = d3.select('body').append('div').style({width: '100%', height: '100%'}).node();
+      d3.selectAll('html, body').classed({'ndtv-fullscreen': true})
     }
     this.domTarget = d3.select(target);
     this.domTarget.classed({'ndtv-d3-container': true});
@@ -66,32 +67,12 @@
 
   n3.prototype.SVGSetup = function() {
     var n3 = this;
+
     var zoom = d3.behavior.zoom()
-        .scaleExtent([1, 10])
-        .on("zoom", zoomed);
-
-    var drag = d3.behavior.drag()
-        .origin(function(d) { return d; })
-        .on("dragstart", dragstarted)
-        .on("drag", dragged)
-        .on("dragend", dragended);
-
-    function zoomed() {
-      n3.container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
-    }
-
-    function dragstarted(d) {
-      d3.event.sourceEvent.stopPropagation();
-      d3.select(this).classed("dragging", true);
-    }
-
-    function dragged(d) {
-      d3.select(this).attr("cx", d.x = d3.event.x).attr("cy", d.y = d3.event.y);
-    }
-
-    function dragended(d) {
-      d3.select(this).classed("dragging", false);
-    }
+      .scaleExtent([1, 10])
+      .on("zoom", function zoomed() {
+        n3.container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+      })
 
     $(n3.domTarget).resize(function(n) { 
       n3.resizeGraph(n);
@@ -140,6 +121,13 @@
     n3.container.append('g').attr('class', 'edges');
     n3.container.append('g').attr('class', 'nodes');
     n3.container.append('g').attr('class', 'labels');
+
+    svg.on('mousedown', function() {
+      svg.classed({'dragging': true})
+    })
+    svg.on('mouseup', function() {
+      svg.classed({'dragging': true})
+    })
   }
 
   n3.prototype.initScales = function() {
