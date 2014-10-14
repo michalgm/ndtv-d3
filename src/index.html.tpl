@@ -12,9 +12,15 @@
     <script src="../src/lib/d3.slider.js"></script>
     <script src="../src/js/ndtv-d3.js"></script>
     <script>
-	     //Insert init JS Here
-       $(function() {
-        
+      //INIT GRAPH DATA HERE
+      var graphData = {};
+      var options = {};
+      //END GRAPH DATA INIT
+	   
+      //Insert init JS Here
+      $(function() {
+        options.graphData = options;
+        var graph = new ndtv_d3(options);        
 		  })
     </script>
   </body>
