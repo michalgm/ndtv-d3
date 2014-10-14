@@ -1,53 +1,68 @@
-var ndtv_d3 = (function() {
-  var options = {
-    defaultDuration: 800, //Duration of each step animation during play or step actions
-    scrubDuration: 100, //Sum duration of all step animations when scrubbing, regardless of # of steps
-    edgeTransitionFactor: 0, //fraction (0-1) of total step animation time that edge enter/exit animations should take
-    labelOffset: { //offset of labels FIXME
-      x: 12,
-      y: 0
-    },
-    nodeSizeFactor: 100, //sets default node size, as viewport / nodeSizeFactor
-    dataChooser: false, //show a select box for choosing different graphs?
-    dataChooserDir: 'data/', //web path to dir containing data json files
-    playControls: true, //show the player controls
-    slider: true, //show the slider control
-    animateOnLoad: false, //play the graph animation on page load
-    margin: { //svg margins - may be overridden when setting fixed aspect ratio
-      x: 20,
-      y: 10
-    },
-    initialDataUrl: null,
-  }
-  
-  var nodes,
-      graph,
-      edges,
-      container,
-      xScale,
-      yScale,
-      maxTime, 
-      slider,
-      animate,
-      baseNodeSize,
-      timeIndex,
-      currTime = 0,
-      prevTime = 0;
-
-  //Private Functions
+(function (root, factory) {
+  root.ndtv_d3 = factory();
+}(this, function() {
+  //return function module() {
+  "use strict";
 
   //constructor
-  var n3 = function(opts) {
+  var n3 = function(opts, target) {
     var _this = this;
-    $.extend(true, options, opts); //replace defaults with user-specified options
-    if (options.dataChooser) { createDataChooser(); }
-    if (options.playControls) { createPlayControls(); }
-    SVGSetup();
-    if(options.initialDataUrl) { n3.loadData(options.initialDataUrl); }
-    this._timeIndex = []; 
+    $.extend(true, this.options, opts); //replace defaults with user-specified n3.options
+    if (!target) { target = 'body'; }
+    this.domTarget = d3.select(target);
+    this.domTarget.classed({'ndtv-d3-container': true});
+    this.SVGSetup();
+    if (this.options.playControls || this.options.slider) {
+      this.domTarget.append('div').attr('class', 'controls');
+    }
+    if (this.options.dataChooser) { this.createDataChooser(); }
+    if (this.options.playControls) { this.createPlayControls(); }
+    if (this.options.slider) { this.createSliderControl(); }
+
+    if(this.options.initialDataUrl) { this.loadData(this.options.initialDataUrl); }
   }
-  
-  var SVGSetup = function() {
+
+  n3.prototype = {
+    nodes: null,
+    edges: null,
+    svg: null,
+    xScale: null,
+    yScale: null,
+    minTime: null,
+    interval: null,
+    maxTime: null,
+    animate: null,
+    baseNodeSize: null,
+    currTime: 0,
+    prevTime:0,
+    graph: null,
+    timeIndex:null,
+    domTarget:null,
+    slider:null,
+    options: {
+      defaultDuration: 800, //Duration of each step animation during play or step actions
+      scrubDuration: 100, //Sum duration of all step animations when scrubbing, regardless of # of steps
+      edgeTransitionFactor: 0, //fraction (0-1) of total step animation time that edge enter/exit animations should take
+      labelOffset: { //offset of labels FIXME
+        x: 12,
+        y: 0
+      },
+      nodeSizeFactor: 100, //sets default node size, as viewport / nodeSizeFactor
+      dataChooser: false, //show a select box for choosing different graphs?
+      dataChooserDir: 'data/', //web path to dir containing data json files
+      playControls: true, //show the player controls
+      slider: true, //show the slider control
+      animateOnLoad: false, //play the n3.graph animation on page load
+      margin: { //svg margins - may be overridden when setting fixed aspect ratio
+        x: 20,
+        y: 10
+      },
+      initialDataUrl: null,
+    }
+  };
+
+  n3.prototype.SVGSetup = function() {
+    var n3 = this;
     var zoom = d3.behavior.zoom()
         .scaleExtent([1, 10])
         .on("zoom", zoomed);
@@ -59,7 +74,7 @@ var ndtv_d3 = (function() {
         .on("dragend", dragended);
 
     function zoomed() {
-      container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+      n3.container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
     }
 
     function dragstarted(d) {
@@ -75,9 +90,15 @@ var ndtv_d3 = (function() {
       d3.select(this).classed("dragging", false);
     }
 
-    $(window).resize(n3.resizeGraph);
+    $(n3.domTarget).resize(function(n) { 
+      n3.resizeGraph(n);
+    });
+    $(window).resize(function(n) { 
+      n3.resizeGraph(n);
+    });
 
-    var svg = d3.select("#graph")
+    n3.domTarget
+      .append('div').attr('class', 'graph')
       .append("svg:svg")
       .append("defs").append("marker")
         .attr("id", 'arrowhead')
@@ -90,8 +111,9 @@ var ndtv_d3 = (function() {
         .attr("orient", "auto")
       .append("svg:path")
         .attr("d", "M0,-5L10,0L0,5");
+    n3.domTarget.select('.graph').append('div').attr('class', 'key');
 
-    var svg = d3.select('#graph svg')
+    var svg = n3.domTarget.select('svg')
       .append('g')
       .call(zoom)
 
@@ -100,53 +122,59 @@ var ndtv_d3 = (function() {
       .style("fill", "none")
       .style("pointer-events", "all");
 
-    container = svg.append("g")
-      .attr('id', 'container')
-    container.append('g').attr('id', 'edges');
-    container.append('g').attr('id', 'nodes');
-    container.append('g').attr('id', 'labels');
+    n3.container = svg.append("g")
+      .attr('class', 'n3.container')
+    n3.container.append('g').attr('class', 'edges');
+    n3.container.append('g').attr('class', 'nodes');
+    n3.container.append('g').attr('class', 'labels');
   }
 
-  var initScales = function() {
-    var window_width = $(window).width();
-    var window_height = $(window).height()-110;
-    if (window_width > window_height) { 
-      options.margin.x = (window_width - window_height)/2
+  n3.prototype.initScales = function() {
+    var n3 = this;
+    var div_width = n3.domTarget.node().offsetWidth
+    var div_height = n3.domTarget.node().offsetHeight -110;
+    if (div_width > div_height) { 
+      n3.options.margin.x = (div_width - div_height)/2
     } else {
-      options.margin.y = (window_height - window_width)/2
+      n3.options.margin.y = (div_height - div_width)/2
     }
 
-    var width = window_width - (options.margin.x*2);
-    var height = window_height - (options.margin.y*2);
+    var width = div_width - (n3.options.margin.x*2);
+    var height = div_height - (n3.options.margin.y*2);
 
-    baseNodeSize = width > height ? height /100 : width/100;
+    n3.baseNodeSize = width > height ? height /100 : width/100;
 
-    d3.selectAll('#graph svg, #background')
+    n3.domTarget.selectAll('svg, .background')
       .attr({
-        width: width + options.margin.x * 2,
-        height: height + options.margin.y * 2
+        width: width + n3.options.margin.x * 2,
+        height: height + n3.options.margin.y * 2
       })
 
-    d3.select('#container')
-      .attr("transform", "translate(" + options.margin.x + "," + options.margin.y + ")");
+    n3.container
+      .attr("transform", "translate(" + n3.options.margin.x + "," + n3.options.margin.y + ")");
 
-    xScale = d3.scale.linear()
-      .domain([graph.gal['xlim.active'][0][0].xlim[0],graph.gal['xlim.active'][0][0].xlim[1]])
+    n3.xScale = d3.scale.linear()
+      .domain([n3.graph.gal['xlim.active'][0][0].xlim[0],n3.graph.gal['xlim.active'][0][0].xlim[1]])
       .range([0, width]);
 
-    yScale = d3.scale.linear()
-      .domain([graph.gal['ylim.active'][0][0].ylim[0],graph.gal['ylim.active'][0][0].ylim[1]])
+    n3.yScale = d3.scale.linear()
+      .domain([n3.graph.gal['ylim.active'][0][0].ylim[0],n3.graph.gal['ylim.active'][0][0].ylim[1]])
       .range([height, 0]);
   }
 
-  function createDataChooser() {
+  n3.prototype.createDataChooser = function() {
+    var n3 = this;
+
+    var div = n3.domTarget.append('div').attr('class', 'data_chooser_container')
+    div.append('select').attr('class', 'data_chooser')
+    div.append('a').attr({'class': 'video_link', 'target': '_blank'}).html('Video');
+
     var setVidLink = function(url) {
-      $('#video_link').attr('href', url.replace('.json', '.mp4'))
+      div.select('.video_link').attr('href', url.replace('.json', '.mp4'))
     }
-    $('body').append($("<div id='data_chooser_container'></div>").append("<select id='data_chooser'/>").append("<a id='video_link' target='_blank'>Video</a>"));
     $.get('data/', function(data){
-      $('#data_chooser').change(function() {
-        var url = $('#data_chooser').val();
+      div.select('.data_chooser').on('change', function() {
+        var url = $(this).val();
         n3.loadData(url);
         setVidLink(url)
       })
@@ -154,7 +182,7 @@ var ndtv_d3 = (function() {
       $.each(matches, function(i, m) {
         var url = m.match(/href="([^"]*)"/)[1];
         if (url.match(/.json$/)) {
-          $('#data_chooser').append("<option>data/"+url+"</option>")
+          div.select('.data_chooser').append('option').html("data/"+url)
         }
         if (i == 1) {
           setVidLink(url);
@@ -162,26 +190,43 @@ var ndtv_d3 = (function() {
       })
     })
   }
- 
-  var createPlayControls = function() {
-    $('#play-control-container').show();
-    $('#step-back-control').click(function() { n3.animateGraph(currTime-1, currTime-1); });
-    $('#play-back-control').click(function() { n3.animateGraph(currTime-1, 0); });
-    $('#pause-control').click(function() { n3.endAnimation(); });
-    $('#play-forward-control').click(function() { n3.animateGraph(currTime+1); });
-    $('#step-forward-control').click(function() { n3.animateGraph(currTime+1, currTime+1); });
+  
+  n3.prototype.createPlayControls = function() {
+    var n3 = this;
+
+    var div = n3.domTarget.select('.controls').append('div').attr('class', 'play-control-container');
+    div.html(
+      "<i class='step-back-control fa fa-step-backward fa-2x'></i>"+
+      "<i class='play-back-control fa fa-play fa-flip-horizontal fa-2x'></i>"+
+      "<i class='pause-control fa fa-pause fa-2x'></i>"+
+      "<i class='play-forward-control fa fa-play fa-2x'></i>"+
+      "<i class='step-forward-control fa fa-step-forward fa-2x'></i>"
+    );
+
+    div.select('.step-back-control').on('click', function() { n3.animateGraph(n3.currTime-1, n3.currTime-1); });
+    div.select('.play-back-control').on('click', function() { n3.animateGraph(n3.currTime-1, 0); });
+    div.select('.pause-control').on('click', function() { n3.endAnimation(); });
+    div.select('.play-forward-control').on('click', function() { n3.animateGraph(n3.currTime+1); });
+    div.select('.step-forward-control').on('click', function() { n3.animateGraph(n3.currTime+1, n3.currTime+1); });
   }
 
-  var dataFilter = function(type) {
-    var dataList = type == 'node' ? nodes : edges;
+  n3.prototype.createSliderControl = function() {
+    var n3 = this;
+    n3.domTarget.select('.controls').append('div').attr('class', 'slider');
+  }
+
+  n3.prototype.dataFilter = function(type) {
+    var n3 = this;
+    var dataList = type == 'node' ? n3.nodes : n3.edges;
 
     return $.grep(dataList, function(item, i) {
-      return n3._timeIndex[currTime].data.active[type+'s'][item.id];
+      return n3.timeIndex[n3.currTime].data.active[type+'s'][item.id];
     });
   }
 
-  var timeLookup = function(property, index, time) {
-    time = time === undefined ? currTime : time;
+  n3.prototype.timeLookup = function(property, index, time) {
+    var n3 = this;
+    time = time === undefined ? n3.currTime : time;
     var defaults = {
       'vertex.cex': 1,
       'vertex.sides': 50,
@@ -189,11 +234,11 @@ var ndtv_d3 = (function() {
       'vertex.col': 'red',
       //'vertex.col': 'inherit'
     }
-    if (n3._timeIndex[time].data[property] !== undefined && n3._timeIndex[time].data[property][index] !== undefined) {
-      return n3._timeIndex[time].data[property][index];
+    if (n3.timeIndex[time].data[property] !== undefined && n3.timeIndex[time].data[property][index] !== undefined) {
+      return n3.timeIndex[time].data[property][index];
     } else {
       if (property == 'coord') {
-        console.log(graph.val[index].active)
+        console.log(n3.graph.val[index].active)
         console.log(index)
         console.log(time)
       }
@@ -201,46 +246,49 @@ var ndtv_d3 = (function() {
     }
   }
 
-
   var drawLine = function() {
     return d3.svg.line()
       .x(function(d){return d[0];})
       .y(function(d){return d[1];})
   }
 
-  var drawPolygon = function(d) { //sides, size, centerx, centery, rotation) { 
-    var sides = timeLookup('vertex.sides', d.id);
-    var size = timeLookup('vertex.cex', d.id) * baseNodeSize;
-    var coords = timeLookup('coord', d.id);
-    var rotation = timeLookup('vertex.rot', d.id)
+  n3.prototype.drawPolygon = function(d) { //sides, size, centerx, centery, rotation) { 
+    var n3 = this;
+    var sides = n3.timeLookup('vertex.sides', d.id);
+    var size = n3.timeLookup('vertex.cex', d.id) * n3.baseNodeSize;
+    var coords = n3.timeLookup('coord', d.id);
+    var rotation = n3.timeLookup('vertex.rot', d.id)
+    var centerX = n3.xScale(coords[0]);
+    var centerY = n3.yScale(coords[1]);
+
+    var rot = rotation * 2 * Math.PI/360
+    var base = 1/sides * 2 * Math.PI;
     var poly = [];
-    var rot = (rotation-45)/360*2*Math.PI
-    var t1 = 2 * Math.PI / sides;
-    var t2 = (Math.PI / sides) + rot;
-    
-    for (var i = 0; i < sides; i++) {
-        var t = t2 + t1 * i;
-        var x = size* Math.sin(t) + xScale(coords[0]);
-        var y = size * Math.cos(t)+ yScale(coords[1]);
+
+    for (var i = 1; i <= sides; i++) {
+        var ang = i * base + rot;
+        var x = centerX + size * Math.cos(ang);
+        var y = centerY + size * Math.sin(ang);
         poly.push([x, y]);
     }
     return drawLine()(poly) + 'Z';
   }
 
-  var getLineCoords = function(d, time) {
+  n3.prototype.getLineCoords = function(d, time) {
+    var n3 = this;
     var time1 = time; 
     var time2 = time;
-    if (time == prevTime) {
-      if (! n3._timeIndex[time].data.active.nodes[d.inl[0]-1]) { time1 = currTime; }
-      if (! n3._timeIndex[time].data.active.nodes[d.outl[0]-1]) { time2 = currTime; }
+    if (time == n3.prevTime) {
+      if (! n3.timeIndex[time].data.active.nodes[d.inl[0]-1]) { time1 = n3.currTime; }
+      if (! n3.timeIndex[time].data.active.nodes[d.outl[0]-1]) { time2 = n3.currTime; }
     }
-    var coord1 = timeLookup('coord', d.inl[0]-1, time1);
-    var coord2 = timeLookup('coord', d.outl[0]-1, time2);
-    var x1 = xScale(coord1[0]);
-    var y1 = yScale(coord1[1]);
-    var x2 = xScale(coord2[0]);
-    var y2 = yScale(coord2[1]);
-    var radius = timeLookup('vertex.cex', d.outl[0]-1, time) * baseNodeSize + 2;
+    var coord1 = n3.timeLookup('coord', d.inl[0]-1, time1);
+    var coord2 = n3.timeLookup('coord', d.outl[0]-1, time2);
+    var x1 = n3.xScale(coord1[0]);
+    var y1 = n3.yScale(coord1[1]);
+    var x2 = n3.xScale(coord2[0]);
+    var y2 = n3.yScale(coord2[1]);
+    var radius = n3.timeLookup('vertex.cex', d.outl[0]-1, time) * n3.baseNodeSize + 2;
 
     // Determine line lengths
     var xlen = x2 - x1;
@@ -256,45 +304,44 @@ var ndtv_d3 = (function() {
     var edgeY = y1 + (ylen * ratio);
     return 'M '+x1+' '+y1+' L '+edgeX+' '+edgeY;
   }
-
-  //Public Functions
-
-  n3.loadData = function(url) {
+ 
+  n3.prototype.loadData = function(url) {
+    var n3 = this;
     n3.endAnimation();
-    currTime = 0;
-    prevTime = 0;
+    n3.currTime = 0;
+    n3.prevTime = 0;
     $.getJSON(url, function(data) {
       console.time('loadData');
-      graph = data;
-      if (options.dataChooser) {
-        $('#data_chooser').val(url);
+      n3.graph = data;
+      if (n3.options.dataChooser) {
+        $(n3.domTarget.select('.data_chooser')).val(url);
       }
-      container.select('#edges').selectAll('*').remove();
-      container.select('#labels').selectAll('*').remove();
-      container.select('#nodes').selectAll('*').remove();
+      n3.container.select('.edges').selectAll('*').remove();
+      n3.container.select('.labels').selectAll('*').remove();
+      n3.container.select('.nodes').selectAll('*').remove();
 
-      initScales();
-      nodes = graph.val;
-      edges = graph.mel;
+      n3.initScales();
+      n3.nodes = n3.graph.val;
+      n3.edges = n3.graph.mel;
 
-      $.each(nodes, function(i, n) {
+      $.each(n3.nodes, function(i, n) {
         if (! $.isEmptyObject(n)) {
           n.id = i;
         }
       })
-      $.each(edges, function(i, e) {
+      $.each(n3.edges, function(i, e) {
         if (! $.isEmptyObject(e)) {
           e.id = i;
         }
       })
 
-      var sliceInfo = graph.gal['slice.par'];
-      minTime = sliceInfo.start[0];
-      maxTime = sliceInfo.end[0];
-      interval = sliceInfo.interval[0];
+      var sliceInfo = n3.graph.gal['slice.par'];
+      n3.minTime = sliceInfo.start[0];
+      n3.maxTime = sliceInfo.end[0];
+      n3.interval = sliceInfo.interval[0];
 
       var valIndex = {};
-      n3._timeIndex = [];
+      n3.timeIndex = [];
       var i = 0;
 
       var checkInterval = function(start, end, slice) {
@@ -315,9 +362,8 @@ var ndtv_d3 = (function() {
         }
         return false;
       }
-      window.check = checkInterval;
 
-      for(var t = minTime; t<=maxTime-interval; t+=interval) {
+      for(var t = n3.minTime; t<=n3.maxTime-n3.interval; t+=n3.interval) {
         var slice = {
           startTime: t,
           endTime: t+sliceInfo['aggregate.dur'][0],
@@ -332,7 +378,7 @@ var ndtv_d3 = (function() {
         };
 
         $.each(['node', 'edge'], function(i, type) {
-          var data = type == 'node' ? nodes : edges;
+          var data = type == 'node' ? n3.nodes : n3.edges;
           $.each(data, function(i, item){
             var active = false;
             if (! $.isEmptyObject(item)) {
@@ -356,8 +402,8 @@ var ndtv_d3 = (function() {
         })
 
         var activeProperties = [
-          ['xlab', 'graph'],
-          ['displaylabels', 'graph'],
+          ['xlab', 'n3.graph'],
+          ['displaylabels', 'n3.graph'],
           ['coord', 'node'],
           ['vertex.cex', 'node'],
           ['label', 'node'],
@@ -368,7 +414,7 @@ var ndtv_d3 = (function() {
         $.each(activeProperties, function(i, prop) {
           var name = prop[0];
           var type = prop[1];
-          var props = graph.gal[name+'.active'];
+          var props = n3.graph.gal[name+'.active'];
 
           slice.data[name] = {};
           if (! props) { 
@@ -377,7 +423,7 @@ var ndtv_d3 = (function() {
           }
           $.each(props[1], function(i, s){
             if(checkInterval(slice.startTime, slice.endTime, s)) {
-              if (type == 'graph') {
+              if (type == 'n3.graph') {
                 slice.data[name] = props[0][i][name];
               } else {
                 $.each(props[0][i][name], function(i, value){
@@ -389,51 +435,55 @@ var ndtv_d3 = (function() {
             }
           })      
         })
-        n3._timeIndex.push(slice);
+        n3.timeIndex.push(slice);
         valIndex[t] = i;
         i++;
       }
-      window.timeIndex = n3._timeIndex;
-      window.graphdata = graph;
 
-      $('#slider').html('');
+      if(n3.options.slider) {
+        var sliderDiv = n3.domTarget.select('.slider');
 
-      slider = d3.slider().axis(true).step(interval);
-      slider.min(minTime)
-      slider.max(maxTime-interval+sliceInfo['aggregate.dur'][0])
-      slider.animate(options.defaultDuration)
-      slider.value(minTime)
-      slider.interval(sliceInfo['aggregate.dur'][0])
-      slider.on('slide', function(ext, value) {
-        n3.endAnimation();
-        var duration = options.scrubDuration/Math.abs(currTime-value);
-        n3.animateGraph(currTime, valIndex[value], duration, true);
-      })
+        sliderDiv.html('');
+
+        n3.slider = d3.slider().axis(true).step(n3.interval);
+        n3.slider.min(n3.minTime)
+        n3.slider.max(n3.maxTime-n3.interval+sliceInfo['aggregate.dur'][0])
+        n3.slider.animate(n3.options.defaultDuration)
+        n3.slider.value(n3.minTime)
+        n3.slider.interval(sliceInfo['aggregate.dur'][0])
+        n3.slider.on('slide', function(ext, value) {
+          n3.endAnimation();
+          var duration = n3.options.scrubDuration/Math.abs(n3.currTime-value);
+          n3.animateGraph(n3.currTime, valIndex[value], duration, true);
+        })
+        
+        n3.slider.on('slideend', function() {
+          n3.slider.animate(n3.options.defaultDuration);
+        })
+        sliderDiv.on('mousedown', function(e) { 
+          n3.slider.animate(n3.options.scrubDuration);
+        })
+
+        sliderDiv.call(n3.slider);
+      }
       
-      slider.on('slideend', function() {
-        slider.animate(options.defaultDuration);
-      })
-      d3.select('#slider').call(slider);
-      $('#slider').mousedown(function(e) { 
-        slider.animate(options.scrubDuration);
-      })
       console.timeEnd('loadData');
-
-      n3.drawGraph(options.defaultDuration);
+      n3.drawGraph(n3.options.defaultDuration);
     })
   }
 
-  n3.drawGraph = function(duration) {
+  n3.prototype.drawGraph = function(duration) {
+    var n3 = this;
 
-    var edgeDuration = duration * options.edgeTransitionFactor;
-    var nodeDuration = duration * 1-options.edgeTransitionFactor;
+    var edgeDuration = duration * n3.options.edgeTransitionFactor;
+    var nodeDuration = duration * 1-n3.options.edgeTransitionFactor;
 
-    $('#key').html(timeLookup('xlab', 0))
-    var lines = container.select('#edges').selectAll('.edge').data(dataFilter('edge'), function(e) { return e.id})
+    n3.domTarget.select('.key').html(n3.timeLookup('xlab', 0))
+    var lines = n3.container.select('.edges').selectAll('.edge').data(n3.dataFilter('edge'), function(e) { return e.id})
       lines.enter().append('path')
         .attr('class', 'edge')
         .attr({
-          d: function(d) {return getLineCoords(d, prevTime);  },
+          d: function(d) {return n3.getLineCoords(d, n3.prevTime);  },
           opacity: 0,
           "marker-end": "url(#arrowhead)"
         })
@@ -456,23 +506,23 @@ var ndtv_d3 = (function() {
         .delay(edgeDuration)
         .duration(nodeDuration)
         .attr({
-          d: function(d) { return getLineCoords(d, currTime); },
+          d: function(d) { return n3.getLineCoords(d, n3.currTime); },
           opacity: 1
         })
         .style('stroke', 'black')
 
-    var nodes = container.select('#nodes').selectAll('.node').data(dataFilter('node'), function(e) { return e.id});
+    var nodes = n3.container.select('.nodes').selectAll('.node').data(n3.dataFilter('node'), function(e) { return e.id});
       nodes.enter().append('path')
         .attr({
           class: 'node',
-          d: function(d, i) { return drawPolygon(d) },
-          //cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
-          //cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
-          //r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
+          d: function(d, i) { return n3.drawPolygon(d) },
+          //cx: function(d, i) { return n3.xScale(n3.timeLookup('coord', i)[0]); },
+          //cy: function(d, i) { return n3.yScale(n3.timeLookup('coord', i)[1]); },
+          //r: function(d, i) { return n3.timeLookup('vertex.cex', i) * baseNodeSize; },
           opacity: 0,
         })
         .style('fill', function(d, i) {
-          return timeLookup('vertex.col', d.id);
+          return n3.timeLookup('vertex.col', d.id);
         })
         .transition()
         .duration(edgeDuration)
@@ -482,14 +532,14 @@ var ndtv_d3 = (function() {
         .delay(edgeDuration)
         .duration(nodeDuration)
         .attr({
-          d: function(d, i) { return drawPolygon(d) },
-          // cx: function(d, i) { return xScale(timeLookup('coord', i)[0]); },
-          // cy: function(d, i) { return yScale(timeLookup('coord', i)[1]); },
-          // r: function(d, i) { return timeLookup('vertex.cex', i) * baseNodeSize; },
+          d: function(d, i) { return n3.drawPolygon(d) },
+          // cx: function(d, i) { return n3.xScale(n3.timeLookup('coord', i)[0]); },
+          // cy: function(d, i) { return n3.yScale(n3.timeLookup('coord', i)[1]); },
+          // r: function(d, i) { return n3.timeLookup('vertex.cex', i) * baseNodeSize; },
           opacity: 1
         })
         .style('fill', function(d, i) {
-          return timeLookup('vertex.col', d.id);
+          return n3.timeLookup('vertex.col', d.id);
         })
 
       nodes.exit()
@@ -498,28 +548,28 @@ var ndtv_d3 = (function() {
         .attr('opacity', 0)
         .remove();
 
-    var labels = container.select('#labels').selectAll('text').data(dataFilter('node'), function(e) { return e.id});
-      labels.enter().append('text').filter(function(d) { return timeLookup('displaylabels', 0)})
+    var labels = n3.container.select('.labels').selectAll('text').data(n3.dataFilter('node'), function(e) { return e.id});
+      labels.enter().append('text').filter(function(d) { return n3.timeLookup('displaylabels', 0)})
         .attr({
           class: 'label',
-          x: function(d, i) { return xScale(timeLookup('coord', d.id)[0])+options.labelOffset.x; },
-          y: function(d, i) { return yScale(timeLookup('coord', d.id)[1])+options.labelOffset.y; },
+          x: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0])+n3.options.labelOffset.x; },
+          y: function(d, i) { return n3.yScale(n3.timeLookup('coord', d.id)[1])+n3.options.labelOffset.y; },
           opacity: 0
         })
-        .text(function(d, i) { return timeLookup('label', d.id); })
+        .text(function(d, i) { return n3.timeLookup('label', d.id); })
         .transition()
         .duration(edgeDuration)
         .attr('opacity', 1)
 
-      labels.transition().filter(function(d) { return timeLookup('displaylabels', 0) !== false})
+      labels.transition().filter(function(d) { return n3.timeLookup('displaylabels', 0) !== false})
         .delay(edgeDuration)
         .duration(nodeDuration)
         .attr({
-          x: function(d, i) { return xScale(timeLookup('coord', d.id)[0])+options.labelOffset.x; },
-          y: function(d, i) { return yScale(timeLookup('coord', d.id)[1])+options.labelOffset.y; },
+          x: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0])+n3.options.labelOffset.x; },
+          y: function(d, i) { return n3.yScale(n3.timeLookup('coord', d.id)[1])+n3.options.labelOffset.y; },
           opacity: 1
         })
-        .text(function(d, i) { return timeLookup('label', d.id); })
+        .text(function(d, i) { return n3.timeLookup('label', d.id); })
 
       labels.exit()
         .transition()
@@ -528,55 +578,66 @@ var ndtv_d3 = (function() {
         .remove();
   }
 
-  n3.resizeGraph = function() {
-    initScales();
-    var lines = container.select('#edges').selectAll('.edge').data(dataFilter('edge'), function(e) { return e.id})
+  n3.prototype.resizeGraph = function() {
+    var n3 = this;
+    n3.initScales();
+    var lines = n3.container.select('.edges').selectAll('.edge').data(n3.dataFilter('edge'), function(e) { return e.id})
       .attr({
-        d: function(d) { return getLineCoords(d, currTime); },
+        d: function(d) { return n3.getLineCoords(d, n3.currTime); },
       });
 
-    var nodes = container.select('#nodes').selectAll('.node').data(dataFilter('node'), function(e) { return e.id})
+    var nodes = n3.container.select('.nodes').selectAll('.node').data(n3.dataFilter('node'), function(e) { return e.id})
       .attr({
-        d: function(d, i) { return drawPolygon(d) },
+        d: function(d, i) { return n3.drawPolygon(d) },
       });
 
-    var labels = container.select('#labels').selectAll('text').data(dataFilter('node'), function(e) { return e.id})
+    var labels = n3.container.select('.labels').selectAll('text').data(n3.dataFilter('node'), function(e) { return e.id})
       .attr({
-        x: function(d, i) { return xScale(timeLookup('coord', d.id)[0])+options.labelOffset.x; },
-        y: function(d, i) { return yScale(timeLookup('coord', d.id)[1])+options.labelOffset.y; },
+        x: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0])+n3.options.labelOffset.x; },
+        y: function(d, i) { return n3.yScale(n3.timeLookup('coord', d.id)[1])+n3.options.labelOffset.y; },
       })
-    $('#slider').html('');
-    d3.select('#slider').call(slider);
 
+    //redraw the slider control 
+    if (n3.options.slider) {
+      var sliderDiv = n3.domTarget.select('.slider');
+      sliderDiv.html('');
+      sliderDiv.call(n3.slider);
+    } 
   }
 
-  n3.animateGraph = function(time, endTime, duration, noUpdate) {
-    //if (endTime !== undefined && ! $.isNumeric(endTime)) { return; }
-    if (time > maxTime-1) { return; }
-    //console.log(currTime + ' '+time+' '+endTime+ ' '+nextTime)
-    if(! noUpdate) {
-      slider.value(n3._timeIndex[time].startTime);
-    }
-    duration = duration === undefined ? options.defaultDuration : duration;
-    //console.log(duration)
-    endTime = endTime === undefined ? maxTime : endTime;
-    var nextTime = endTime > time ? time +1 : time -1;
-    //console.log(nextTime)
-    //console.log(currTime + ' '+time+' '+endTime+ ' '+nextTime)
+  n3.prototype.animateGraph = function(time, endTime, duration, noUpdate) {
+    var n3 = this;
+    if (time > n3.maxTime-1 || time < n3.minTime) { return; }
 
-    prevTime = currTime;
-    currTime = time == currTime ? nextTime : time;
-    //console.log(currTime + ' '+time+' '+endTime+ ' '+nextTime+ ' '+prevTime)
+    duration = duration === undefined ? n3.options.defaultDuration : duration;
+    endTime = endTime === undefined ? n3.maxTime : endTime;
+    var nextTime;
+    if (time == endTime) {
+      nextTime = time;
+    } else if (endTime > time) {
+      nextTime = time +1;
+    } else {
+      nextTime = time -1;
+    }
+
+    n3.prevTime = n3.currTime;
+    n3.currTime = time == n3.currTime ? nextTime : time;
+    //console.log(n3.currTime + ' '+time+' '+endTime+ ' '+nextTime+ ' '+n3.prevTime)
+    if(! noUpdate && n3.options.slider) {
+      n3.slider.value(n3.timeIndex[n3.currTime].startTime);
+    }
     n3.drawGraph(duration);
-    if (currTime != endTime) {
-      animate = setTimeout(function(){
+    if (n3.currTime != endTime) {
+      n3.animate = setTimeout(function(){
         n3.animateGraph(nextTime, endTime, duration, noUpdate);
       }, duration)
     }
   }
 
-  n3.endAnimation = function(){
-    clearTimeout(animate);
+  n3.prototype.endAnimation = function(){
+    var n3 = this;
+    clearTimeout(n3.animate);
   }
+
   return n3;
-}()); 
+}));

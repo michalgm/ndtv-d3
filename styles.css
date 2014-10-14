@@ -2,6 +2,7 @@ body, html {
   padding: 0;
   margin: 0;
   width: 100%;
+  height: 100%;
 }
 
 .label {
@@ -17,30 +18,47 @@ body, html {
 .edge {
   stroke: black;
 }
-#graph { 
+
+.graph { 
   overflow: hidden;
 }
 
-#key {
+.key {
   padding: 10px;
   text-align: center;
 }
 
-#controls { 
+.controls { 
   margin: 0px 20px;
 }
-#controls i {
+.controls i {
   margin: 0px 5px;
   cursor: pointer;
 }
-#controls i:hover {
+.controls i:hover {
   color: blue;
 }
 
-#data_chooser_container {
+.data_chooser_container {
   position: absolute; top: 10px; left: 10px;
 }
 
-#play-control-container {
-  display: none;
+.play-control-container {
+  float: right; 
+  width: 185px; 
+  background: #ccc; 
+  border-radius: 5px; 
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.ndtv-d3-container { 
+  position: relative;
+  box-sizing: border-box;
+  border: 1px solid;
+}
+
+.slider { 
+  margin-right: 240px;
+  box-sizing: border-box;
 }
