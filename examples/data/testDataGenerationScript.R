@@ -6,9 +6,9 @@ library(ndtv)
 saveVideo=TRUE  # should video versions of the json files be rendered for debugging? (slower)
 
 # delete the various movie files so that they can be overwritten
-unlink('js/ndtv-d3/data/shortStergm.mp4')
-unlink('js/ndtv-d3/data/msmSim.mp4')
-unlink('js/ndtv-d3/data/windsurfers.json')
+unlink('js/ndtv-d3/examples/data/shortStergm.mp4')
+unlink('js/ndtv-d3/examples/data/msmSim.mp4')
+unlink('js/ndtv-d3/examples/data/windsurfers.json')
 
 # this renders out a version of the 'flo-marriage' short.stergm.sim object
 # added some arbitrary vertex attribute transformations to make it useful
@@ -16,16 +16,17 @@ unlink('js/ndtv-d3/data/windsurfers.json')
 data(short.stergm.sim)
 library(tergm)
 compute.animation(short.stergm.sim)
-render.d3movie(short.stergm.sim,filename='js/ndtv-d3/data/shortStergm.json',
+render.d3movie(short.stergm.sim,filename='js/ndtv-d3/examples/data/shortStergm.json',
                vertex.col=function(slice,onset){rgb(((slice%v%'wealth')/146),0.5,0.5)},
                vertex.cex=function(slice,onset){slice%v%'wealth'/100+onset},
-               render.par=list(show.stats="~edges+gwesp(0,fixed=TRUE)"))
+               render.par=list(show.stats="~edges+gwesp(0,fixed=TRUE)"),
+               output.mode='JSON')
 
 if(saveVideo){
 saveVideo(render.animation(short.stergm.sim,
                vertex.col=function(slice,onset){rgb(((slice%v%'wealth')/146),0.5,0.5)},
                vertex.cex=function(slice,onset){slice%v%'wealth'/100+onset},
-               render.par=list(show.stats="~edges+gwesp(0,fixed=TRUE)"),render.cache='none'),video.name='js/ndtv-d3/data/shortStergm.mp4')
+               render.par=list(show.stats="~edges+gwesp(0,fixed=TRUE)"),render.cache='none'),video.name='js/ndtv-d3/examples/data/shortStergm.mp4')
 }
 
 # msm.sim is a much larger network
@@ -33,11 +34,12 @@ saveVideo(render.animation(short.stergm.sim,
 # it also has a bunch of deleted edges which will appear as blank entries on mel
 data(msm.sim)
 msm.sim <- compute.animation(msm.sim,slice.par=list(start=0,end=10,interval=1,aggregate.dur=3, rule='earliest'))
-render.d3movie(msm.sim,filename='js/ndtv-d3/data/msmSim.json',
+render.d3movie(msm.sim,filename='js/ndtv-d3/examples/data/msmSim.json',
                vertex.sides=ifelse(msm.sim%v%'race'==1,3,4),  # change shape based on race
                edge.lwd=function(slice){runif(network.edgecount(slice),0.5,5)},# change edge width randomly
                vertex.cex=function(slice){sapply(1:network.size(slice),function(v){0.1+length(get.edgeIDs(slice,v))/2})}, # change sizes in proportion to number of edges
-               displaylabels=FALSE  # don't show labels
+               displaylabels=FALSE,  # don't show labels
+               output.mode='JSON'
                )
 if (saveVideo){
 saveVideo(render.animation(msm.sim,
@@ -47,7 +49,7 @@ saveVideo(render.animation(msm.sim,
                 vertex.col='gray',
                 displaylabels=FALSE,  # don't show labels
                 render.cache = 'none'),
-          video.name ='js/ndtv-d3/data/msmSim.mp4')
+          video.name ='js/ndtv-d3/examples/data/msmSim.mp4')
 }
 
 # example including vertex activity
@@ -64,7 +66,8 @@ render.d3movie(windsurfers,
                label.col="blue",
                main="Freeman's windsurfer contact network\nwith 7 day aggregation",
                bg='yellow',
-               filename='js/ndtv-d3/data/windsurfers.json')
+               filename='js/ndtv-d3/examples/data/windsurfers.json',
+               output.mode='JSON')
 if(saveVideo){
 saveVideo(render.animation(windsurfers,
                            vertex.col="group1", 
@@ -73,7 +76,7 @@ saveVideo(render.animation(windsurfers,
                            label.cex=.6,
                            label.col="blue",
                            main="Freeman's windsurfer contact network\nwith 7 day aggregation",
-                           render.cache='none'),video.name='js/ndtv-d3/data/windsurfers.mp4')
+                           render.cache='none'),video.name='js/ndtv-d3/examples/data/windsurfers.mp4')
 }
 
 # example including html classes
