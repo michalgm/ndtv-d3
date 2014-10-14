@@ -271,7 +271,7 @@
     if (data[property] !== undefined) {
       if (type == 'graph') {
         if (data[property] !== undefined) {
-          value = data[property];
+          value = data[property][0];
         }
       } else {
         var lookup = data.active[type+'s'][index];
@@ -327,6 +327,18 @@
     }
     var coord1 = n3.timeLookup('coord', d.inl[0], time1);
     var coord2 = n3.timeLookup('coord', d.outl[0], time2);
+    $.each([coord1, coord2], function(i, c) {
+      var type = i ? 'in' : 'out';
+      if (! c ) {
+        console.log('missing '+type+'-node coords for edge '+d.id+' ('+d.inl[0]+'->'+d.outl[0]+') at time '+time);
+        console.log('valid edge time slices are '+n3.graph.mel[d.id-1].atl.active.join(','))   
+        if (i) {
+          coord2 = [50,50];
+        } else {
+          coord1 = [50,50];
+        }
+      }
+    })
     var x1 = n3.xScale(coord1[0]);
     var y1 = n3.yScale(coord1[1]);
     var x2 = n3.xScale(coord2[0]);
