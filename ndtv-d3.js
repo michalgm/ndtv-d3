@@ -242,8 +242,8 @@
     } else {
       if (property == 'coord') {
         console.log(n3.graph.val[index].active)
-        console.log(index)
-        console.log(time)
+        console.log('missing coordinates for node '+index+ ' at time '+time+' ('+n3.timeIndex[time].start+'-'+n3.timeIndex[time].end+')');
+        console.log('valid time slices for node '+index+' are '+n3.graph.val[index].active.join(','))
       }
       return defaults[property];
     }
