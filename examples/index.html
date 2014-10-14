@@ -17,13 +17,13 @@
 	     $(function() {
           var options = {
             dataChooser: true,
-            initialDataUrl: 'data/windsurfers.json',
+            graphData: 'data/windsurfers.json',
             //defaultDuration: 3000,
             //edgeTransitionFactor: .4
           }
           graph = new ndtv_d3(options, '#graph1');
 
-          options.initialDataUrl = 'data/msmSim.json'
+          options.graphData = 'data/msmSim.json'
           graph2 = new ndtv_d3(options, '#graph2');
 		  })
     </script>

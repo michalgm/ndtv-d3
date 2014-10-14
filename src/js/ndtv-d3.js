@@ -19,7 +19,7 @@
     if (this.options.playControls) { this.createPlayControls(); }
     if (this.options.slider) { this.createSliderControl(); }
 
-    if(this.options.initialDataUrl) { this.loadData(this.options.initialDataUrl); }
+    if(this.options.graphData) { this.loadData(this.options.graphData); }
   }
 
   n3.prototype = {
@@ -59,7 +59,7 @@
       x: 20,
       y: 10
     },
-    initialDataUrl: null,
+    graphData: null,
   };
 
   n3.prototype.SVGSetup = function() {
@@ -308,18 +308,19 @@
     return 'M '+x1+' '+y1+' L '+edgeX+' '+edgeY;
   }
  
-  n3.prototype.loadData = function(url) {
+  n3.prototype.loadData = function(graphData) {
     var n3 = this;
     n3.endAnimation();
     n3.currTime = 0;
     n3.prevTime = 0;
-    $.getJSON(url, function(data) {
+
+    var processData = function(data) {
       console.time('loadData');
       n3.graph = data.network;
       n3.timeIndex = data.render;
-      if (n3.options.dataChooser) {
-        $(n3.domTarget.select('.data_chooser').node()).val(url);
-        n3.domTarget.select('.video_link').attr('href', url.replace('.json', '.mp4'))
+      if (n3.options.dataChooser && ! $.isPlainObject(graphData)) {
+        $(n3.domTarget.select('.data_chooser').node()).val(graphData);
+        n3.domTarget.select('.video_link').attr('href', graphData.replace('.json', '.mp4'))
       }
       n3.container.select('.edges').selectAll('*').remove();
       n3.container.select('.labels').selectAll('*').remove();
@@ -478,7 +479,15 @@
       
       console.timeEnd('loadData');
       n3.drawGraph(n3.options.defaultDuration);
-    })
+    };
+
+    if($.isPlainObject(graphData)) {
+      processData(graphData)
+    } else {
+      $.getJSON(graphData, function(data) {
+        processData(data);
+      });
+    }
   }
 
   n3.prototype.drawGraph = function(duration) {
