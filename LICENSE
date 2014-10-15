@@ -1,3 +1,13 @@
+The ndtv-d3 library was created by Greg Michalec and Skye Bender-deMoll
+The license for the ndtv-d3 library is the GPL version 2, included below
+
+This repository/distribution may also include copies of several other javascript libraries in the lib directory each of which includes its own license file.  Those libraries are:
+
+ * d3    http://d3js.org  Michael Bostock BSD license: http://opensource.org/licenses/BSD-3-Clause
+ * d3.slider    http://blog.thematicmapping.org Bjorn Sandvik  BSD license: http://opensource.org/licenses/BSD-3-Clause 
+ * jQuery    http://jquery.com/   jQuery Foundation  MIT License
+
+
 GNU GENERAL PUBLIC LICENSE
                        Version 2, June 1991
 
