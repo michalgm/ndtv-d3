@@ -106,7 +106,6 @@
         .attr("orient", "auto")
       .append("svg:path")
         .attr("d", "M0,-5L10,0L0,5");
-    n3.domTarget.select('.graph').append('div').attr('class', 'key');
 
     var svg = n3.domTarget.select('svg')
       .append('g')
@@ -118,25 +117,40 @@
       .style("pointer-events", "all");
 
     n3.container = svg.append("g")
-      .attr('class', 'n3.container')
+      .attr('class', 'container')
     n3.container.append('g').attr('class', 'edges');
     n3.container.append('g').attr('class', 'nodes');
     n3.container.append('g').attr('class', 'labels');
-    svg.append('g').attr('class', 'title').append('text');
-    svg.append('g').attr('class', 'key').append('text').attr('translate');
+    svg.append('g').attr('class', 'main').append('text');
+    svg.append('g').attr('class', 'xlab').append('text');
 
     svg.on('mousedown', function() {
       svg.classed({'dragging': true})
     })
     svg.on('mouseup', function() {
-      svg.classed({'dragging': true})
+      svg.classed({'dragging': false})
     })
   }
 
   n3.prototype.initScales = function() {
     var n3 = this;
     var div_width = n3.domTarget.node().offsetWidth
-    var div_height = n3.domTarget.node().offsetHeight -110;
+    var div_height = n3.domTarget.node().offsetHeight -$('.controls').outerHeight(true);
+
+    var xlab = n3.timeLookup('xlab');
+    var main = n3.timeLookup('main');
+    var xlabSize = parseFloat(window.getComputedStyle(n3.domTarget.select('.xlab').node(), null).getPropertyValue('font-size'));
+    var mainSize = parseFloat(window.getComputedStyle(n3.domTarget.select('.main').node(), null).getPropertyValue('font-size'));
+    var mainMargin = 0;
+    var xlabMargin = 0;
+
+    if (xlab) {
+      xlabMargin = xlabSize*(xlab.length+1)*1.2;
+    } 
+    if (main) {
+      mainMargin = mainSize*(main.length+1)*1.2;
+    } 
+    
     var margin = {
       x: n3.options.margin.x,
       y: n3.options.margin.y
@@ -149,29 +163,35 @@
 
     var width = div_width - (margin.x*2);
     var height = div_height - (margin.y*2);
-    n3.baseNodeSize = width > height ? height /100 : width/100;
 
     n3.domTarget.selectAll('svg, .background')
       .attr({
         width: width + margin.x * 2,
         height: height + margin.y * 2
       })
+    
+    //reset height including main & xlab for graph container translation
+    height = height - mainMargin - xlabMargin;
 
-    n3.container
-      .attr("transform", "translate(" + margin.x + "," + margin.y + ")");
+    n3.container.attr("transform", "translate(" + margin.x + "," + (margin.y+mainMargin) + ")");
+
 
     var center = margin.x + width/2;
-    n3.domTarget.select('.key').attr('transform', "translate("+center+","+height+")")
-    n3.domTarget.select('.title').attr('transform', "translate("+center+",0)")
+    n3.domTarget.select('.xlab').attr('transform', "translate("+center+","+(div_height-margin.y)+")")
+    n3.domTarget.select('.main').attr('transform', "translate("+center+","+(margin.y+mainSize)+")")
+
+    var pixelSpace = height > width ? width : height;
+    n3.baseNodeSize = pixelSpace / n3.options.nodeSizeFactor;
+
     n3.xScale = d3.scale.linear()
       .domain([n3.timeIndex[0].data.xlim[0],n3.timeIndex[0].data.xlim[1]])
 //      .domain([n3.graph.gal['xlim.active'][0][0].xlim[0],n3.graph.gal['xlim.active'][0][0].xlim[1]])
-      .range([0, width]);
+      .range([0, pixelSpace]);
 
     n3.yScale = d3.scale.linear()
       .domain([n3.timeIndex[0].data.ylim[0],n3.timeIndex[0].data.ylim[1]])
       //.domain([n3.graph.gal['ylim.active'][0][0].ylim[0],n3.graph.gal['ylim.active'][0][0].ylim[1]])
-      .range([height, 0]);
+      .range([pixelSpace, 0]);
   }
 
   n3.prototype.createDataChooser = function() {
@@ -243,6 +263,9 @@
     var data = n3.timeIndex[time].data;
     var properties = {
       'xlab': {
+        type: 'graph',
+      },
+      'main': {
         type: 'graph',
       },
       'displaylabels': {
@@ -328,6 +351,9 @@
         console.log('valid time slices for node '+index+' are '+n3.graph.val[index].active.join(','))
         console.log('filling in with last know position: '+value)
       }
+    }
+    if (value && (property == 'main' || property == 'xlab')) {
+      value = value.split('\n');
     }
     return value;
   }
@@ -604,8 +630,21 @@
     var edgeDuration = duration * n3.options.edgeTransitionFactor;
     var nodeDuration = duration * 1-n3.options.edgeTransitionFactor;
 
-    n3.domTarget.select('.key text').text(n3.timeLookup('xlab'));
-    n3.domTarget.select('.title text').text("fooopp Hey");
+    $.each(['main', 'xlab'], function(i, type){
+      var text = n3.timeLookup(type);
+      var target = n3.domTarget.select('.'+type+' text');
+      target.selectAll('*').remove();
+
+      if (text) {
+        $.each(text, function(i, t){
+          target.append('tspan').attr({
+            'dy': (i ? '1.2em' : 0),
+            'x': 0,
+          }).text(t);
+        })
+      }
+    });
+
     n3.domTarget.select('.background').transition()
       .duration(duration)
       .style({fill: n3.timeLookup('bg')});
@@ -700,6 +739,7 @@
         .text(function(d, i) { return n3.timeLookup('label', d.id); })
         .style({
           'stroke': function(d) {return n3.timeLookup('label.col', d.id); },
+          'fill': function(d) {return n3.timeLookup('label.col', d.id); },
         })
         .transition()
         .duration(edgeDuration)
@@ -716,6 +756,7 @@
         .text(function(d, i) { return n3.timeLookup('label', d.id); })
         .style({
           'stroke': function(d) {return n3.timeLookup('label.col', d.id); },
+          'fill': function(d) {return n3.timeLookup('label.col', d.id); },
         })
 
 

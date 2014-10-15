@@ -5,13 +5,16 @@
   height: 100%;
 }
 
-.title, .key {
-  text-anchor: middle;
-  alignment-baseline:middle;
+.ndtv-d3-container {
+  position: relative;
 }
 
-.label {
-  font-family: 'Ubuntu'
+.main, .xlab {
+  text-anchor: middle;
+}
+
+.label, .main, .xlab {
+  font-family: sans-serif;
 }
 
 .dragging {
@@ -38,7 +41,13 @@
 }
 
 .controls { 
-  margin: 0px 20px;
+  margin: 10px 20px;
+  height: 50px;
+  box-sizing: border-box;
+  position: absolute;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
 }
 
 .play-control-container>div {
@@ -80,4 +89,8 @@
 .slider { 
   margin-right: 210px;
   box-sizing: border-box;
+}
+
+.d3-slider.axis {
+  height: 20px;
 }
