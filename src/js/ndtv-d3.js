@@ -77,7 +77,8 @@
 
   n3.prototype.SVGSetup = function() {
     var n3 = this;
-
+    
+    //define zooming behavior
     var zoom = d3.behavior.zoom()
       .scaleExtent([1, 10])
       .on("zoom", function zoomed() {
@@ -90,7 +91,8 @@
     $(window).resize(function(n) { 
       n3.resizeGraph(n);
     });
-
+    
+    //define SVG icons to be used in the play controller
     if (d3.select('#ndtv-svg-icons').empty()) {
       $('body').prepend(
       '<svg id="ndtv-svg-icons" display="none" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="176" height="32" viewBox="0 0 176 32">'+
@@ -202,7 +204,8 @@
       //.domain([n3.graph.gal['ylim.active'][0][0].ylim[0],n3.graph.gal['ylim.active'][0][0].ylim[1]])
       .range([pixelSpace, 0]);
   }
-
+  
+  //creates the (optional) dataChooser element to be used for slecting among multiple JSON files for debugging
   n3.prototype.createDataChooser = function() {
     var n3 = this;
 
@@ -232,6 +235,7 @@
     })
   }
   
+  // creates the play controls using svg icons and defines the attached events
   n3.prototype.createPlayControls = function() {
     var n3 = this;
 
@@ -250,12 +254,14 @@
     div.select('.play-forward-control').on('click', function() { n3.animateGraph(n3.currTime+1); });
     div.select('.step-forward-control').on('click', function() { n3.animateGraph(n3.currTime+1, n3.currTime+1); });
   }
-
+  
+  // creates the time slider controls and defines attached events
   n3.prototype.createSliderControl = function() {
     var n3 = this;
     n3.domTarget.select('.controls').append('div').attr('class', 'slider-control-container').append('div').attr('class', 'slider');
   }
 
+  // define the data filter used to determine which events should be returned for the current time
   n3.prototype.dataFilter = function(type) {
     var n3 = this;
     var dataList = type == 'node' ? n3.nodes : n3.edges;
@@ -265,68 +271,69 @@
     });
   }
 
+  // listing of all the known properties and which type of element (node, edge, graph) they belong to
   n3.prototype.timeLookup = function(property, index, time) {
     var n3 = this;
     time = time === undefined ? n3.currTime : time;
     
     var data = n3.timeIndex[time].data;
     var properties = {
-      'xlab': {
+      'xlab': {           // label caption below the render, on the xaxis
         type: 'graph',
       },
-      'main': {
+      'main': {           // main headline above the render
         type: 'graph',
       },
-      'displaylabels': {
+      'displaylabels': {  // should vertex labels be displayed
         type:  'graph'
       },
-      'bg' : {
+      'bg' : {            // background color
         type: 'graph',
         default: '#fff'
       },
-      'coord': { 
+      'coord': {          // coordinates for nodes
         type:  'node'
       },
-      'vertex.cex': {
+      'vertex.cex': {    // vertex (node) expansion scale factor
         type:  'node',
         default: 1
       },
-      'label': { 
+      'label': {        // labels for vertices
         type:  'node'
       },
-      'label.col': { 
+      'label.col': {    // color of node label
         type:  'node',
         default: '#000'
       },
-      'vertex.col': { 
+      'vertex.col': {   // node fill color
         type:  'node',
         default: '#f00'
       },
-      'vertex.sides': { 
+      'vertex.sides': {  // number of sides for vertex polygon (shape)
         type:  'node',
         default: 50
       },
-      'vertex.rot': { 
+      'vertex.rot': {   // rotation for vertex polygon
         type:  'node',
         default: 0
       },
-      'usearrows': {
+      'usearrows': {    // should arrows be drawn on edges?
         type: 'graph',
         default: true
       },
-      'vertex.border': {
+      'vertex.border': { // color of vertex border stroke
         type: 'node',
         default: '#000'
       },
-      'vertex.lwd': {
+      'vertex.lwd': {   // width of vertex border stroke
         type: 'node',
         default: '1'
       },
-      'edge.lwd': {
+      'edge.lwd': {     // width of edge stroke
         type: 'edge',
         default: '1'
       },
-      'edge.col': {
+      'edge.col': {    // edge stroke color
         type: 'edge',
         default: '#000'
       }
@@ -394,7 +401,8 @@
     }
     return drawLine()(poly) + 'Z';
   }
-
+  
+  // look up the coordinates for an edge given the time
   n3.prototype.getLineCoords = function(d, time) {
     var n3 = this;
     var time1 = time; 
@@ -449,6 +457,7 @@
     return 'M '+x1+' '+y1+' L '+edgeX+' '+edgeY;
   }
  
+  // load and process the JSON formatted data
   n3.prototype.loadData = function(graphData) {
     var n3 = this;
     n3.endAnimation();
@@ -816,7 +825,8 @@
       sliderDiv.call(n3.slider);
     } 
   }
-
+  
+  // function to 'play' animation or jump to a specific point in time
   n3.prototype.animateGraph = function(time, endTime, duration, noUpdate) {
     var n3 = this;
     if (time > n3.maxTime-1 || time < n3.minTime) { return; }
