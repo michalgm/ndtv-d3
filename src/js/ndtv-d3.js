@@ -244,7 +244,7 @@
 
   n3.prototype.createSliderControl = function() {
     var n3 = this;
-    n3.domTarget.select('.controls').append('div').attr('class', 'slider');
+    n3.domTarget.select('.controls').append('div').attr('class', 'slider-control-container').append('div').attr('class', 'slider');
   }
 
   n3.prototype.dataFilter = function(type) {
@@ -590,6 +590,7 @@
         sliderDiv.html('');
 
         n3.slider = d3.slider().axis(true).step(n3.interval);
+        n3.slider.margin(35)
         n3.slider.min(n3.minTime)
         n3.slider.max(n3.maxTime-n3.interval+sliceInfo['aggregate.dur'][0])
         n3.slider.animate(n3.options.defaultDuration)
