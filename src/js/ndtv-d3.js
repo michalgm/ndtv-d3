@@ -228,8 +228,6 @@
     });
   }
 
-  var colorScale =  d3.scale.category20();
-
   n3.prototype.timeLookup = function(property, index, time) {
     var n3 = this;
     time = time === undefined ? n3.currTime : time;
@@ -244,7 +242,7 @@
       },
       'bg' : {
         type: 'graph',
-        default: colorScale(time)
+        default: '#fff'
       },
       'coord': { 
         type:  'node'
@@ -256,9 +254,13 @@
       'label': { 
         type:  'node'
       },
+      'label.col': { 
+        type:  'node',
+        default: '#000'
+      },
       'vertex.col': { 
         type:  'node',
-        default: 'red'
+        default: '#f00'
       },
       'vertex.sides': { 
         type:  'node',
@@ -268,6 +270,26 @@
         type:  'node',
         default: 0
       },
+      'usearrows': {
+        type: 'graph',
+        default: true
+      },
+      'vertex.border': {
+        type: 'node',
+        default: '#000'
+      },
+      'vertex.lwd': {
+        type: 'node',
+        default: '1'
+      },
+      'edge.lwd': {
+        type: 'edge',
+        default: '1'
+      },
+      'edge.col': {
+        type: 'edge',
+        default: '#000'
+      }
     }
 
     var type = properties[property].type;
@@ -356,27 +378,31 @@
     var y1 = n3.yScale(coord1[1]);
     var x2 = n3.xScale(coord2[0]);
     var y2 = n3.yScale(coord2[1]);
-    var radius = n3.timeLookup('vertex.cex', d.outl[0], time) * n3.baseNodeSize + 2;
+    if(n3.timeLookup('usearrows', 0, time)) {
+      var radius = n3.timeLookup('vertex.cex', d.outl[0], time) * n3.baseNodeSize + 2;
 
-    // Determine line lengths
-    var xlen = x2 - x1;
-    var ylen = y2 - y1;
+      // Determine line lengths
+      var xlen = x2 - x1;
+      var ylen = y2 - y1;
 
-    // Determine hypotenuse length
-    var hlen = Math.sqrt(Math.pow(xlen,2) + Math.pow(ylen,2));
+      // Determine hypotenuse length
+      var hlen = Math.sqrt(Math.pow(xlen,2) + Math.pow(ylen,2));
 
-    // Determine the ratio between they shortened value and the full hypotenuse.
-    var ratio = (hlen - radius) / hlen;
+      // Determine the ratio between they shortened value and the full hypotenuse.
+      var ratio = (hlen - radius) / hlen;
 
-    var edgeX = x1 + (xlen * ratio);
-    var edgeY = y1 + (ylen * ratio);
-    
-    //If the ratio is invalid, just use the original coordinates
-    if (! $.isNumeric(ratio)) { 
+      var edgeX = x1 + (xlen * ratio);
+      var edgeY = y1 + (ylen * ratio);
+      
+      //If the ratio is invalid, just use the original coordinates
+      if (! $.isNumeric(ratio)) { 
+        edgeX = x2;
+        edgeY = y2;
+      }
+    } else {
       edgeX = x2;
       edgeY = y2;
     }
-    
     return 'M '+x1+' '+y1+' L '+edgeX+' '+edgeY;
   }
  
@@ -581,9 +607,12 @@
         .attr({
           d: function(d) {return n3.getLineCoords(d, n3.prevTime);  },
           opacity: 0,
-          "marker-end": "url(#arrowhead)"
+          "marker-end": function(d) { if(n3.timeLookup('usearrows')) { return "url(#arrowhead)"; }}
         })
-        .style('stroke', 'green')
+        .style({
+          'stroke': 'green',
+          'stroke-width': function(d) { return n3.timeLookup('edge.lwd', d.id); }
+        })
         .transition()
         .duration(edgeDuration)
         .attr({opacity: 1})
@@ -605,7 +634,10 @@
           d: function(d) { return n3.getLineCoords(d, n3.currTime); },
           opacity: 1
         })
-        .style('stroke', 'black')
+        .style({
+          'stroke': function(d) { return n3.timeLookup('edge.col', d.id)},
+          'stroke-width': function(d) { return n3.timeLookup('edge.lwd', d.id); },
+        })
 
     var nodes = n3.container.select('.nodes').selectAll('.node').data(n3.dataFilter('node'), function(e) { return e.id});
       nodes.enter().append('path')
@@ -617,8 +649,10 @@
           //r: function(d, i) { return n3.timeLookup('vertex.cex', i) * baseNodeSize; },
           opacity: 0,
         })
-        .style('fill', function(d, i) {
-          return n3.timeLookup('vertex.col', d.id);
+        .style({
+          'fill': function(d, i) {return n3.timeLookup('vertex.col', d.id); },
+          'stroke-width': function(d) {return n3.timeLookup('vertex.lwd', d.id); },
+          'stroke': function(d) {return n3.timeLookup('vertex.border', d.id); },
         })
         .transition()
         .duration(edgeDuration)
@@ -634,8 +668,10 @@
           // r: function(d, i) { return n3.timeLookup('vertex.cex', i) * baseNodeSize; },
           opacity: 1
         })
-        .style('fill', function(d, i) {
-          return n3.timeLookup('vertex.col', d.id);
+        .style({
+          'fill': function(d, i) {return n3.timeLookup('vertex.col', d.id); },
+          'stroke-width': function(d) {return n3.timeLookup('vertex.lwd', d.id); },
+          'stroke': function(d) {return n3.timeLookup('vertex.border', d.id); },
         })
 
       nodes.exit()
@@ -653,6 +689,9 @@
           opacity: 0
         })
         .text(function(d, i) { return n3.timeLookup('label', d.id); })
+        .style({
+          'stroke': function(d) {return n3.timeLookup('label.col', d.id); },
+        })
         .transition()
         .duration(edgeDuration)
         .attr('opacity', 1)
@@ -666,6 +705,10 @@
           opacity: 1
         })
         .text(function(d, i) { return n3.timeLookup('label', d.id); })
+        .style({
+          'stroke': function(d) {return n3.timeLookup('label.col', d.id); },
+        })
+
 
       labels.exit()
         .transition()
