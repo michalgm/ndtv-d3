@@ -42,6 +42,7 @@
     timeIndex:null,
     domTarget:null,
     slider:null,
+    node_coords: {},
   };
   
   n3.prototype.options = {
@@ -281,13 +282,21 @@
         var lookup = data.active[type+'s'][index];
         if (lookup === undefined) {
           console.log('attempting to access property '+property+ ' for inactive '+type+' id '+index);
-          if (property == 'coord') {
-            console.log('missing coordinates for node '+index+ ' at time '+time+' ('+n3.timeIndex[time].start+'-'+n3.timeIndex[time].end+')');
-            console.log('valid time slices for node '+index+' are '+n3.graph.val[index].active.join(','))
-          }
         } else if (data[property][lookup] !== undefined) {
           value = data[property][lookup];
         }
+      }
+    }
+    if (property == 'coord') {
+      if (value) {
+        if (time == n3.currTime) {
+          n3.node_coords[index] = value;
+        }
+      } else {
+        value = n3.node_coords[index]
+        console.log('missing coordinates for node '+index+ ' at time '+time+' ('+n3.timeIndex[time].start+'-'+n3.timeIndex[time].end+')');
+        console.log('valid time slices for node '+index+' are '+n3.graph.val[index].active.join(','))
+        console.log('filling in with last know position: '+value)
       }
     }
     return value;
@@ -336,11 +345,11 @@
       if (! c ) {
         console.log('missing '+type+'-node coords for edge '+d.id+' ('+d.inl[0]+'->'+d.outl[0]+') at time '+time);
         console.log('valid edge time slices are '+n3.graph.mel[d.id-1].atl.active.join(','))   
-        if (i) {
-          coord2 = [50,50];
-        } else {
-          coord1 = [50,50];
-        }
+      }
+      if (n3.xScale(c[0]) == NaN || n3.yScale(c[1]) == NaN) {
+        console.log('invalic '+type+'-node coords for edge '+d.id+' ('+d.inl[0]+'->'+d.outl[0]+') at time '+time);
+        console.log(c);
+        console.log('valid edge time slices are '+n3.graph.mel[d.id-1].atl.active.join(','))   
       }
     })
     var x1 = n3.xScale(coord1[0]);
@@ -361,6 +370,13 @@
 
     var edgeX = x1 + (xlen * ratio);
     var edgeY = y1 + (ylen * ratio);
+    
+    //If the ratio is invalid, just use the original coordinates
+    if (! $.isNumeric(ratio)) { 
+      edgeX = x2;
+      edgeY = y2;
+    }
+    
     return 'M '+x1+' '+y1+' L '+edgeX+' '+edgeY;
   }
  
@@ -385,11 +401,13 @@
       n3.initScales();
       n3.nodes = n3.graph.val;
       n3.edges = n3.graph.mel;
+      n3.node_coords = {};
 
       $.each(n3.nodes, function(i, n) {
         if (! $.isEmptyObject(n)) {
           n.id = i+1;
         }
+        n3.node_coords[n.id] = [0,0];
       })
       $.each(n3.edges, function(i, e) {
         if (! $.isEmptyObject(e)) {
