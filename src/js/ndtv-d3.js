@@ -3,29 +3,29 @@
 }(this, function() {
   //return function module() {
   "use strict";
+  
+  var default_options = {
+    defaultDuration: 800, //Duration of each step animation during play or step actions
+    scrubDuration: 100, //Sum duration of all step animations when scrubbing, regardless of # of steps
+    edgeTransitionFactor: 0, //fraction (0-1) of total step animation time that edge enter/exit animations should take
+    labelOffset: { //offset of labels FIXME
+      x: 12,
+      y: 0
+    },
+    nodeSizeFactor: 100, //sets default node size, as viewport / nodeSizeFactor
+    dataChooser: false, //show a select box for choosing different graphs?
+    dataChooserDir: 'data/', //web path to dir containing data json files
+    playControls: true, //show the player controls
+    slider: true, //show the slider control
+    animateOnLoad: false, //play the graph animation on page load
+    margin: { //svg margins - may be overridden when setting fixed aspect ratio
+      x: 20,
+      y: 10
+    },
+    graphData: null,
+  };
 
-  //constructor
-  var n3 = function(opts, target) {
-    var _this = this;
-    $.extend(true, this.options, opts); //replace defaults with user-specified n3.options
-    if (!target) {
-      target = d3.select('body').append('div').style({width: '100%', height: '100%'}).node();
-      d3.selectAll('html, body').classed({'ndtv-fullscreen': true})
-    }
-    this.domTarget = d3.select(target);
-    this.domTarget.classed({'ndtv-d3-container': true});
-    this.SVGSetup();
-    if (this.options.playControls || this.options.slider) {
-      this.domTarget.append('div').attr('class', 'controls');
-    }
-    if (this.options.dataChooser) { this.createDataChooser(); }
-    if (this.options.playControls) { this.createPlayControls(); }
-    if (this.options.slider) { this.createSliderControl(); }
-
-    if(this.options.graphData) { this.loadData(this.options.graphData); }
-  }
-
-  n3.prototype = {
+  var properties = {
     nodes: null,
     edges: null,
     svg: null,
@@ -43,28 +43,37 @@
     domTarget:null,
     slider:null,
     node_coords: {},
-  };
-  
-  n3.prototype.options = {
-    defaultDuration: 800, //Duration of each step animation during play or step actions
-    scrubDuration: 100, //Sum duration of all step animations when scrubbing, regardless of # of steps
-    edgeTransitionFactor: 0, //fraction (0-1) of total step animation time that edge enter/exit animations should take
-    labelOffset: { //offset of labels FIXME
-      x: 12,
-      y: 0
-    },
-    nodeSizeFactor: 100, //sets default node size, as viewport / nodeSizeFactor
-    dataChooser: false, //show a select box for choosing different graphs?
-    dataChooserDir: 'data/', //web path to dir containing data json files
-    playControls: true, //show the player controls
-    slider: true, //show the slider control
-    animateOnLoad: false, //play the n3.graph animation on page load
-    margin: { //svg margins - may be overridden when setting fixed aspect ratio
-      x: 20,
-      y: 10
-    },
-    graphData: null,
-  };
+    options: {}
+  }
+
+  //constructor
+  var n3 = function(opts, target) {
+    var n3 = this;
+    
+    //initialize class with default properties
+    $.extend(true, n3, properties);
+
+    //replace defaults with user-specified options
+    $.extend(true, n3.options, default_options);
+    $.extend(true, n3.options, opts);
+
+    if (!target) {
+      target = d3.select('body').append('div').style({width: '100%', height: '100%'}).node();
+      d3.selectAll('html, body').classed({'ndtv-fullscreen': true})
+    }
+    n3.domTarget = d3.select(target);
+    n3.domTarget.classed({'ndtv-d3-container': true});
+    n3.SVGSetup();
+    if (n3.options.playControls || n3.options.slider) {
+      n3.domTarget.append('div').attr('class', 'controls');
+    }
+    if (n3.options.dataChooser) { n3.createDataChooser(); }
+    if (n3.options.playControls) { n3.createPlayControls(); }
+    if (n3.options.slider) { n3.createSliderControl(); }
+
+    n3.tooltip = n3.domTarget.append('div').attr('class', 'tooltip')
+    if(n3.options.graphData) { n3.loadData(n3.options.graphData); }
+  }
 
   n3.prototype.SVGSetup = function() {
     var n3 = this;
@@ -135,7 +144,7 @@
   n3.prototype.initScales = function() {
     var n3 = this;
     var div_width = n3.domTarget.node().offsetWidth
-    var div_height = n3.domTarget.node().offsetHeight -$('.controls').outerHeight(true);
+    var div_height = n3.domTarget.node().offsetHeight - $(n3.domTarget.select('.controls').node()).outerHeight(true);
 
     var xlab = n3.timeLookup('xlab');
     var main = n3.timeLookup('main');
@@ -611,9 +620,12 @@
 
         sliderDiv.call(n3.slider);
       }
-      
       console.timeEnd('loadData');
-      n3.drawGraph(n3.options.defaultDuration);
+      if (n3.options.animateOnLoad) {
+        n3.animateGraph(n3.currTime+1);
+      } else {
+        n3.drawGraph(n3.options.defaultDuration);
+      }
     };
 
     if($.isPlainObject(graphData)) {
@@ -702,6 +714,16 @@
           'fill': function(d, i) {return n3.timeLookup('vertex.col', d.id); },
           'stroke-width': function(d) {return n3.timeLookup('vertex.lwd', d.id); },
           'stroke': function(d) {return n3.timeLookup('vertex.border', d.id); },
+        }).on('click', function(d) {
+          var coords = n3.timeLookup('coord', d.id);
+          var offset = $(n3.container.node()).position();
+          n3.tooltip.style({
+            display: 'block',
+            top: (n3.yScale(coords[1])+offset.top)+'px',
+            left: (n3.xScale(coords[0])+offset.left)+'px',
+          }).html(d.id)
+          console.log(n3.xScale(coords[0]))
+          console.log(offset);
         })
         .transition()
         .duration(edgeDuration)
