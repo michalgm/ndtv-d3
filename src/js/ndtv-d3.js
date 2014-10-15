@@ -122,6 +122,8 @@
     n3.container.append('g').attr('class', 'edges');
     n3.container.append('g').attr('class', 'nodes');
     n3.container.append('g').attr('class', 'labels');
+    svg.append('g').attr('class', 'title').append('text');
+    svg.append('g').attr('class', 'key').append('text').attr('translate');
 
     svg.on('mousedown', function() {
       svg.classed({'dragging': true})
@@ -135,26 +137,32 @@
     var n3 = this;
     var div_width = n3.domTarget.node().offsetWidth
     var div_height = n3.domTarget.node().offsetHeight -110;
+    var margin = {
+      x: n3.options.margin.x,
+      y: n3.options.margin.y
+    }
     if (div_width > div_height) { 
-      n3.options.margin.x = (div_width - div_height)/2
+      margin.x = (div_width - div_height)/2
     } else {
-      n3.options.margin.y = (div_height - div_width)/2
+      margin.y = (div_height - div_width)/2
     }
 
-    var width = div_width - (n3.options.margin.x*2);
-    var height = div_height - (n3.options.margin.y*2);
-
+    var width = div_width - (margin.x*2);
+    var height = div_height - (margin.y*2);
     n3.baseNodeSize = width > height ? height /100 : width/100;
 
     n3.domTarget.selectAll('svg, .background')
       .attr({
-        width: width + n3.options.margin.x * 2,
-        height: height + n3.options.margin.y * 2
+        width: width + margin.x * 2,
+        height: height + margin.y * 2
       })
 
     n3.container
-      .attr("transform", "translate(" + n3.options.margin.x + "," + n3.options.margin.y + ")");
+      .attr("transform", "translate(" + margin.x + "," + margin.y + ")");
 
+    var center = margin.x + width/2;
+    n3.domTarget.select('.key').attr('transform', "translate("+center+","+height+")")
+    n3.domTarget.select('.title').attr('transform', "translate("+center+",0)")
     n3.xScale = d3.scale.linear()
       .domain([n3.timeIndex[0].data.xlim[0],n3.timeIndex[0].data.xlim[1]])
 //      .domain([n3.graph.gal['xlim.active'][0][0].xlim[0],n3.graph.gal['xlim.active'][0][0].xlim[1]])
@@ -596,7 +604,8 @@
     var edgeDuration = duration * n3.options.edgeTransitionFactor;
     var nodeDuration = duration * 1-n3.options.edgeTransitionFactor;
 
-    n3.domTarget.select('.key').html(n3.timeLookup('xlab', 0));
+    n3.domTarget.select('.key text').text(n3.timeLookup('xlab'));
+    n3.domTarget.select('.title text').text("fooopp Hey");
     n3.domTarget.select('.background').transition()
       .duration(duration)
       .style({fill: n3.timeLookup('bg')});

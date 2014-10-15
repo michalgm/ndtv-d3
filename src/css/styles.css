@@ -5,6 +5,11 @@
   height: 100%;
 }
 
+.title, .key {
+  text-anchor: middle;
+  alignment-baseline:middle;
+}
+
 .label {
   font-family: 'Ubuntu'
 }
