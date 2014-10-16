@@ -12,14 +12,14 @@
     <script src="../src/js/ndtv-d3.js"></script>
     <script>
       //INIT GRAPH DATA HERE
-      var graphData = {};
-      var options = {};
+      graphData = {};
+      options = {};
       //END GRAPH DATA INIT
 	   
       //Insert init JS Here
       $(function() {
         options.graphData = graphData;
-        var graph = new ndtv_d3(options);        
+        graph = new ndtv_d3(options);        
 		  })
     </script>
   </body>
