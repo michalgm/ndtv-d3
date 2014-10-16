@@ -4,6 +4,7 @@
 library(ndtv)
 
 saveVideo=TRUE  # should video versions of the json files be rendered for debugging? (slower)
+saveHTML=TRUE
 
 # delete the various movie files so that they can be overwritten
 unlink('inst/javascript/ndtv-d3/examples/data/shortStergm.mp4')
@@ -22,6 +23,13 @@ render.d3movie(short.stergm.sim,filename='inst/javascript/ndtv-d3/examples/data/
                vertex.cex=function(slice,onset){slice%v%'wealth'/100+onset},
                render.par=list(show.stats="~edges+gwesp(0,fixed=TRUE)"),
                output.mode='JSON')
+if(saveHTML){
+  render.d3movie(short.stergm.sim,filename='inst/javascript/ndtv-d3/examples/data/shortStergm.html',
+                 vertex.col=function(slice,onset){rgb(((slice%v%'wealth')/146),0.5,0.5)},
+                 vertex.cex=function(slice,onset){slice%v%'wealth'/100+onset},
+                 render.par=list(show.stats="~edges+gwesp(0,fixed=TRUE)"),
+                 output.mode='HTML')
+}
 
 if(saveVideo){
 saveVideo(render.animation(short.stergm.sim,
@@ -42,6 +50,14 @@ render.d3movie(msm.sim,filename='inst/javascript/ndtv-d3/examples/data/msmSim.js
                displaylabels=FALSE,  # don't show labels
                output.mode='JSON'
                )
+if (saveHTML){
+  render.d3movie(msm.sim,filename='inst/javascript/ndtv-d3/examples/data/msmSim.html',
+                 vertex.sides=ifelse(msm.sim%v%'race'==1,3,4),  # change shape based on race
+                 edge.lwd=function(slice){runif(network.edgecount(slice),0.5,5)},# change edge width randomly
+                 vertex.cex=function(slice){sapply(1:network.size(slice),function(v){0.1+length(get.edgeIDs(slice,v))/2})}, # change sizes in proportion to number of edges
+                 displaylabels=FALSE,  # don't show labels
+                 output.mode='HTML'
+}
 if (saveVideo){
 saveVideo(render.animation(msm.sim,
                 vertex.sides=ifelse(msm.sim%v%'race'==1,3,4),  # change shape based on race
@@ -69,6 +85,18 @@ render.d3movie(windsurfers,
                bg='yellow',
                filename='inst/javascript/ndtv-d3/examples/data/windsurfers.json',
                output.mode='JSON')
+if(saveHTML){
+  render.d3movie(windsurfers,
+                 vertex.col="group1", 
+                 edge.col="darkgray",
+                 displaylabels=TRUE,
+                 label.cex=.6,
+                 label.col="blue",
+                 main="Freeman's windsurfer contact network\nwith 7 day aggregation",
+                 bg='yellow',
+                 filename='inst/javascript/ndtv-d3/examples/data/windsurfers.html',
+                 output.mode='HTML'
+}
 if(saveVideo){
 saveVideo(render.animation(windsurfers,
                            vertex.col="group1", 
@@ -86,9 +114,27 @@ data(McFarland_cls33_10_16_96)
 slice.par<-list(start=0,end=40,interval=0.5,aggregate.dur=2.5,rule="latest")
 compute.animation(cls33_10_16_96,slice.par=slice.par,animation.mode='MDSJ')
 render.d3movie(cls33_10_16_96,filename='inst/javascript/ndtv-d3/examples/data/mcfarlandClass.json',output.mode='JSON',vertex.col='type',vertex.sides=ifelse(cls33_10_16_96%v%'gender'==1,4,50))
+
+if(saveHTML){
+  slice.par<-list(start=0,end=40,interval=0.5,aggregate.dur=2.5,rule="latest")
+  compute.animation(cls33_10_16_96,slice.par=slice.par,animation.mode='MDSJ')
+  render.d3movie(cls33_10_16_96,filename='inst/javascript/ndtv-d3/examples/data/mcfarlandClass.html',output.mode='HTML',vertex.col='type',vertex.sides=ifelse(cls33_10_16_96%v%'gender'==1,4,50))
+}
+
 if(saveVideo){
   saveVideo(render.animation(cls33_10_16_96,,vertex.col='type',vertex.sides=ifelse(cls33_10_16_96%v%'gender'==1,4,50),render.cache='none'), video.name='inst/javascript/ndtv-d3/examples/data/mcfarlandClass.mp4')
 }
+
+# example including edge and vertex labels
+render.d3movie(short.stergm.sim,
+               vertex.tooltip=function(slice){paste('name:',network.vertex.names(slice),
+                                                    'randomVal: ',runif(network.size(slice)),
+                                                    'wealth: ',slice%v%'wealth',
+                                                    'priorates',slice%v%'priorates',collapse="\n")},
+               edge.tooltip="<span style='color:blue'>I have a blue label!</span>"
+               displaylabels=FALSE
+               filename='tooltipTest.html')
+
 
 # example including html classes
 
