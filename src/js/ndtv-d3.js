@@ -134,6 +134,16 @@
     svg.on('mouseup', function() {
       svg.classed({'dragging': false})
     })
+
+    n3.zoom = d3.behavior.zoom()
+      .scaleExtent([.5, 10])
+      .on("zoom", function zoomed() {
+        n3.container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+        n3.moveTooltip();
+      })
+
+    svg.call(n3.zoom)
+
   }
 
   n3.prototype.initScales = function() {
@@ -198,14 +208,8 @@
       .range([pixelSpace, 0]);
 
     //define zooming behavior
-    var zoom = d3.behavior.zoom()
-      .scaleExtent([.5, 10])
-      .translate([margin.x, margin.y+mainMargin])
-      .on("zoom", function zoomed() {
-        n3.container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
-        n3.moveTooltip();
-      })
-    n3.domTarget.select('svg>g').call(zoom)
+    n3.zoom.translate([margin.x, margin.y+mainMargin])
+
   }
   
   //creates the (optional) dataChooser element to be used for slecting among multiple JSON files for debugging
@@ -504,109 +508,10 @@
       $.each(n3.timeIndex, function(i, t){
         valIndex[t.start] = i;
       })      
-      /*
 
-      n3.timeIndex = [];
-      var i = 0;
-
-      var checkInterval = function(start, end, slice) {
-        if (start == end ) {
-          return true; 
-        } else {
-          $.each(slice, function(i, num){
-            if (num == 'Inf') { slice[i] = Infinity; }
-            if (num == '-Inf') { slice[i] = -Infinity; }
-          })
-
-          if (
-            (end > slice[0] && start < slice[1])
-            //(slice[0] < end && slice[1] > start)
-          ) {
-            return true;
-          }
-        }
-        return false;
-      }
-
-      for(var t = n3.minTime; t<=n3.maxTime-n3.interval; t+=n3.interval) {
-        var slice = {
-          startTime: t,
-          endTime: t+sliceInfo['aggregate.dur'][0],
-          data: {}
-        };
-        
-        slice.data.active = {
-          nodes: {},
-          edges: {},
-          node_index: [],
-          edge_index: []
-        };
-
-        $.each(['node', 'edge'], function(i, type) {
-          var data = type == 'node' ? n3.nodes : n3.edges;
-          $.each(data, function(i, item){
-            var active = false;
-            if (! $.isEmptyObject(item)) {
-              if (item.active || (item.atl && item.atl.active)) {
-                var activeProperty = type == 'node' ? item.active : item.atl.active;
-                $.each(activeProperty, function(i, s) {
-                  if(checkInterval(slice.startTime, slice.endTime, s)) {
-                    active = true;
-                    return false;
-                  }
-                })
-              } else {
-                active = true;
-              }
-              slice.data.active[type+'s'][item.id] = active;
-              if (active) {
-                slice.data.active[type+'_index'].push(item.id);
-              }
-            } 
-          })
-        })
-
-        var activeProperties = [
-          ['xlab', 'n3.graph'],
-          ['displaylabels', 'n3.graph'],
-          ['coord', 'node'],
-          ['vertex.cex', 'node'],
-          ['label', 'node'],
-          ['vertex.col', 'node'],
-          ['vertex.sides', 'node'],
-          ['vertex.rot', 'node'],
-        ];
-        $.each(activeProperties, function(i, prop) {
-          var name = prop[0];
-          var type = prop[1];
-          var props = n3.graph.gal[name+'.active'];
-
-          slice.data[name] = {};
-          if (! props) { 
-            //console.log('no property: '+prop); 
-            return;
-          }
-          $.each(props[1], function(i, s){
-            if(checkInterval(slice.startTime, slice.endTime, s)) {
-              if (type == 'n3.graph') {
-                slice.data[name] = props[0][i][name];
-              } else {
-                $.each(props[0][i][name], function(i, value){
-                  var id = slice.data.active[type+'_index'][i];
-                  slice.data[name][id] = value;
-                })
-              }
-              return false;
-            }
-          })      
-        })
-        n3.timeIndex.push(slice);
-        valIndex[t] = i;
-        i++;
-      }
-      */
       if(n3.options.slider) {
         var sliderDiv = n3.domTarget.select('.slider');
+        var slider_active = false;
 
         sliderDiv.html('');
 
@@ -619,8 +524,7 @@
         n3.slider.interval(sliceInfo['aggregate.dur'][0])
         n3.slider.on('slide', function(ext, value) {
           //Check to see if event originated from slider control or elsewhere
-          var target = d3.select(ext.target);
-          if (target.classed('d3-slider-handle') || target.classed('d3-slider')) {
+          if (slider_active) { 
             n3.endAnimation();
             var duration = n3.options.scrubDuration/Math.abs(n3.currTime-value);
             n3.animateGraph(n3.currTime, valIndex[value], duration, true);
@@ -631,7 +535,11 @@
           n3.slider.animate(n3.options.animationDuration);
         })
         sliderDiv.on('mousedown', function(e) { 
+          slider_active = true;
           n3.slider.animate(n3.options.scrubDuration);
+        })
+        sliderDiv.on('mouseup', function(e){
+          slider_active = false;
         })
 
         sliderDiv.call(n3.slider);
@@ -859,7 +767,7 @@
     n3.currTime = time == n3.currTime ? nextTime : time;
     //console.log(n3.currTime + ' '+time+' '+endTime+ ' '+nextTime+ ' '+n3.prevTime)
     if(! noUpdate && n3.options.slider) {
-      n3.slider.value(n3.timeIndex[n3.currTime].start);
+      n3.slider.value(n3.timeIndex[n3.currTime].start[0]);
     }
     n3.drawGraph(duration);
     if (n3.currTime != endTime) {
