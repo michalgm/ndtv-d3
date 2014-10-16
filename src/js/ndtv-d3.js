@@ -766,7 +766,7 @@
         .remove();
 
     var labels = n3.container.select('.labels').selectAll('text').data(n3.dataFilter('node'), function(e) { return e.id});
-      labels.enter().append('text').filter(function(d) { return n3.timeLookup('displaylabels', 0)})
+      labels.enter().append('text').filter(function(d) { return n3.timeLookup('displaylabels') !== false; )})
         .attr({
           class: function(d) { return 'label label_'+d.id; },
           x: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0])+n3.options.labelOffset.x; },
@@ -781,7 +781,7 @@
         .duration(edgeDuration)
         .attr('opacity', 1)
 
-      labels.transition().filter(function(d) { return n3.timeLookup('displaylabels', 0) !== false})
+      labels.transition().filter(function(d) { return n3.timeLookup('displaylabels') !== false; })
         .delay(edgeDuration)
         .duration(nodeDuration)
         .attr({
