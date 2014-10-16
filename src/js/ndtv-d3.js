@@ -12,7 +12,7 @@
       x: 12,
       y: 0
     },
-    nodeSizeFactor: 100, //sets default node size, as viewport / nodeSizeFactor
+    nodeSizeFactor: 0.01, //sets default node size, as viewport / nodeSizeFactor
     dataChooser: false, //show a select box for choosing different graphs?
     dataChooserDir: 'data/', //web path to dir containing data json files
     playControls: true, //show the player controls
@@ -185,7 +185,7 @@
     n3.domTarget.select('.main').attr('transform', "translate("+center+","+(margin.y+mainSize)+")")
 
     var pixelSpace = height > width ? width : height;
-    n3.baseNodeSize = pixelSpace / n3.options.nodeSizeFactor;
+    n3.baseNodeSize = pixelSpace * n3.options.nodeSizeFactor;
 
     n3.xScale = d3.scale.linear()
       .domain([n3.timeIndex[0].data.xlim[0],n3.timeIndex[0].data.xlim[1]])
@@ -199,7 +199,7 @@
 
     //define zooming behavior
     var zoom = d3.behavior.zoom()
-      .scaleExtent([1, 10])
+      .scaleExtent([.5, 10])
       .translate([margin.x, margin.y+mainMargin])
       .on("zoom", function zoomed() {
         n3.container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
@@ -219,7 +219,7 @@
     var setVidLink = function(url) {
       div.select('.video_link').attr('href', url.replace('.json', '.mp4'))
     }
-    $.get('data/', function(data){
+    $.get(n3.options.dataChooserDir, function(data){
       div.select('.data_chooser').on('change', function() {
         var url = $(this).val();
         n3.loadData(url);
@@ -229,7 +229,7 @@
       $.each(matches, function(i, m) {
         var url = m.match(/href="([^"]*)"/)[1];
         if (url.match(/.json$/)) {
-          div.select('.data_chooser').append('option').attr('value', "data/"+url).html(url);
+          div.select('.data_chooser').append('option').attr('value', n3.options.dataChooserDir+url).html(url);
         }
         if (i == 1) {
           setVidLink(url);
@@ -766,7 +766,7 @@
         .remove();
 
     var labels = n3.container.select('.labels').selectAll('text').data(n3.dataFilter('node'), function(e) { return e.id});
-      labels.enter().append('text').filter(function(d) { return n3.timeLookup('displaylabels') !== false; )})
+      labels.enter().append('text').filter(function(d) { return n3.timeLookup('displaylabels') !== false; })
         .attr({
           class: function(d) { return 'label label_'+d.id; },
           x: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0])+n3.options.labelOffset.x; },
