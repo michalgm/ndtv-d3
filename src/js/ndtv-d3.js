@@ -5,24 +5,24 @@
   "use strict";
   
   var default_options = {
-    defaultDuration: 800, //Duration of each step animation during play or step actions
-    scrubDuration: 100, //Sum duration of all step animations when scrubbing, regardless of # of steps
-    edgeTransitionFactor: 0, //fraction (0-1) of total step animation time that edge enter/exit animations should take
-    labelOffset: { //offset of labels FIXME
+    animationDuration: 800,       //Duration of each step animation during play or step actions, in milliseconds
+    scrubDuration: 0,             //Sum duration of all step animations when scrubbing, regardless of # of steps
+    enterExitAnimationFactor: 0,  //Percentage (0-1) of total step animation time that enter/exit animations should take
+    labelOffset: {                //pixel offset of labels
       x: 12,
       y: 0
     },
-    nodeSizeFactor: 0.01, //sets default node size, as viewport / nodeSizeFactor
-    dataChooser: false, //show a select box for choosing different graphs?
-    dataChooserDir: 'data/', //web path to dir containing data json files
-    playControls: true, //show the player controls
-    slider: true, //show the slider control
-    animateOnLoad: false, //play the graph animation on page load
-    margin: { //svg margins - may be overridden when setting fixed aspect ratio
+    nodeSizeFactor: 0.01,         //Percentage (0-1) of viewport size that a node of size 1 will be rendered at
+    dataChooser: false,           //show a select box for choosing different graphs?
+    dataChooserDir: 'data/',      //web path to dir containing data json files
+    playControls: true,           //show the player controls
+    slider: true,                 //show the slider control
+    animateOnLoad: false,         //play the graph animation on page load
+    margin: {                     //graph render area margins
       x: 20,
       y: 10
     },
-    graphData: null,
+    graphData: null,              //graph data, either as JSON object or URL to json file
   };
 
   var properties = {
@@ -614,7 +614,7 @@
         n3.slider.margin(35)
         n3.slider.min(n3.minTime)
         n3.slider.max(n3.maxTime-n3.interval+sliceInfo['aggregate.dur'][0])
-        n3.slider.animate(n3.options.defaultDuration)
+        n3.slider.animate(n3.options.animationDuration)
         n3.slider.value(n3.minTime)
         n3.slider.interval(sliceInfo['aggregate.dur'][0])
         n3.slider.on('slide', function(ext, value) {
@@ -628,7 +628,7 @@
         })
         
         n3.slider.on('slideend', function() {
-          n3.slider.animate(n3.options.defaultDuration);
+          n3.slider.animate(n3.options.animationDuration);
         })
         sliderDiv.on('mousedown', function(e) { 
           n3.slider.animate(n3.options.scrubDuration);
@@ -640,7 +640,7 @@
       if (n3.options.animateOnLoad) {
         n3.animateGraph(n3.currTime+1);
       } else {
-        n3.drawGraph(n3.options.defaultDuration);
+        n3.drawGraph(n3.options.animationDuration);
       }
     };
 
@@ -656,8 +656,8 @@
   n3.prototype.drawGraph = function(duration) {
     var n3 = this;
 
-    var edgeDuration = duration * n3.options.edgeTransitionFactor;
-    var nodeDuration = duration * 1-n3.options.edgeTransitionFactor;
+    var edgeDuration = duration * n3.options.enterExitAnimationFactor;
+    var nodeDuration = duration * 1-n3.options.enterExitAnimationFactor;
 
     $.each(['main', 'xlab'], function(i, type){
       var text = n3.timeLookup(type);
@@ -844,7 +844,7 @@
     var n3 = this;
     if (time > n3.maxTime-1 || time < n3.minTime) { return; }
 
-    duration = duration === undefined ? n3.options.defaultDuration : duration;
+    duration = duration === undefined ? n3.options.animationDuration : duration;
     endTime = endTime === undefined ? n3.maxTime : endTime;
     var nextTime;
     if (time == endTime) {

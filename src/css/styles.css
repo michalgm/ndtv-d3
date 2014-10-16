@@ -30,7 +30,7 @@
 }
 
 .node:hover {
-  stroke-width: 10px !important;
+  stroke-width: 5px !important;
 }
 
 .edge {
