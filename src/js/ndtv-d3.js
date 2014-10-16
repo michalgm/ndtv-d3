@@ -675,7 +675,7 @@
     });
 
     n3.domTarget.select('.background').transition()
-      .duration(duration)
+      .duration(!(n3.currTime == 0 && n3.prevTime ==0) * duration) //show immediately if this is the first load
       .style({fill: n3.timeLookup('bg')});
 
     var lines = n3.container.select('.edges').selectAll('.edge').data(n3.dataFilter('edge'), function(e) { return e.id})
@@ -799,6 +799,17 @@
         .duration(edgeDuration)
         .attr('opacity', 0)
         .remove();
+  
+      var count = 0;
+      var tooltipThrottle = 50;
+      var translateTooltip = function() {
+        n3.moveTooltip();
+        count += tooltipThrottle;
+        if ( count <= duration+tooltipThrottle) {
+          setTimeout(translateTooltip, tooltipThrottle);
+        }
+      }
+      translateTooltip();
   }
 
   n3.prototype.resizeGraph = function() {
@@ -867,13 +878,18 @@
     var n3 = this;
     if (n3.selectedNode) {
       var nodeDOM = n3.container.select('.node_'+n3.selectedNode.id).node();
-      var coords = nodeDOM.getBoundingClientRect();
-      var offset = $(n3.domTarget.node()).position();
-      n3.tooltip.style({
-        display: 'block',
-        top: (coords.top - offset.top-30)+'px', //FIXME - need to offset by rendered height
-        left: (coords.right - offset.left)+'px',
-      }).html('Node ID: '+n3.selectedNode.id)
+      if (!nodeDOM) {
+        n3.selectedNode = null;
+        return;
+      } else {
+        var coords = nodeDOM.getBoundingClientRect();
+        var offset = $(n3.domTarget.node()).position();
+        n3.tooltip.style({
+          display: 'block',
+          top: (coords.top - offset.top-30)+'px', //FIXME - need to offset by rendered height
+          left: (coords.right - offset.left)+'px',
+        }).html('Node ID: '+n3.selectedNode.id)
+      }
     }
   }
   return n3;
