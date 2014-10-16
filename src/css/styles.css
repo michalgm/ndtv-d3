@@ -13,7 +13,7 @@
   text-anchor: middle;
 }
 
-.label, .main, .xlab {
+.label, .main, .xlab, .tooltip {
   font-family: sans-serif;
 }
 
@@ -25,10 +25,20 @@
   stroke-width: 1px;
   fill: red;
   stroke: black;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.node:hover {
+  stroke-width: 10px !important;
 }
 
 .edge {
   stroke: black;
+}
+
+.label {
+  pointer-events: none;
 }
 
 .graph { 
@@ -99,8 +109,7 @@
   display: none;
   position: absolute;
   z-index: 1000;
-  padding: 5px 10px;
-  background: rgba(255,255,255,0.8);
-  border-radius: 5px;
-  border: 1px solid #000;
+  padding: 10px 10px;
+  background: rgba(255,255,255, 1);
+  border: 1px solid #666;
 }

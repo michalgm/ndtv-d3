@@ -19,15 +19,15 @@
           var options = {
             dataChooser: true,
             graphData: 'data/windsurfers.json',
-            //defaultDuration: 3000,
-            //edgeTransitionFactor: .4
+            defaultDuration: 3000,
+            edgeTransitionFactor: .4
           }
           graph = new ndtv_d3(options, '#graph1');
 
           options.graphData = 'data/msmSim.json'
-          options.animateOnLoad = true;
-          options.playControls = false;
-          options.slider = false;
+          //options.animateOnLoad = true;
+          //options.playControls = false;
+          //options.slider = false;
           graph2 = new ndtv_d3(options, '#graph2');
 		  })
     </script>

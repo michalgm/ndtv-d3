@@ -78,12 +78,6 @@
   n3.prototype.SVGSetup = function() {
     var n3 = this;
     
-    //define zooming behavior
-    var zoom = d3.behavior.zoom()
-      .scaleExtent([1, 10])
-      .on("zoom", function zoomed() {
-        n3.container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
-      })
 
     $(n3.domTarget).resize(function(n) { 
       n3.resizeGraph(n);
@@ -120,7 +114,6 @@
 
     var svg = n3.domTarget.select('svg')
       .append('g')
-      .call(zoom)
 
     var rect = svg.append("rect")
       .attr('class', 'background')
@@ -203,6 +196,16 @@
       .domain([n3.timeIndex[0].data.ylim[0],n3.timeIndex[0].data.ylim[1]])
       //.domain([n3.graph.gal['ylim.active'][0][0].ylim[0],n3.graph.gal['ylim.active'][0][0].ylim[1]])
       .range([pixelSpace, 0]);
+
+    //define zooming behavior
+    var zoom = d3.behavior.zoom()
+      .scaleExtent([1, 10])
+      .translate([margin.x, margin.y+mainMargin])
+      .on("zoom", function zoomed() {
+        n3.container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+        n3.moveTooltip();
+      })
+    n3.domTarget.select('svg>g').call(zoom)
   }
   
   //creates the (optional) dataChooser element to be used for slecting among multiple JSON files for debugging
@@ -408,8 +411,8 @@
     var time1 = time; 
     var time2 = time;
     if (time == n3.prevTime) {
-      if (! n3.timeIndex[time].data.active.nodes[d.inl[0]]) { time1 = n3.currTime; }
-      if (! n3.timeIndex[time].data.active.nodes[d.outl[0]]) { time2 = n3.currTime; }
+      if (n3.timeIndex[time].data.active.nodes[d.inl[0]] === undefined) { time1 = n3.currTime; }
+      if (n3.timeIndex[time].data.active.nodes[d.outl[0]] === undefined) { time2 = n3.currTime; }
     }
     var coord1 = n3.timeLookup('coord', d.inl[0], time1);
     var coord2 = n3.timeLookup('coord', d.outl[0], time2);
@@ -615,9 +618,13 @@
         n3.slider.value(n3.minTime)
         n3.slider.interval(sliceInfo['aggregate.dur'][0])
         n3.slider.on('slide', function(ext, value) {
-          n3.endAnimation();
-          var duration = n3.options.scrubDuration/Math.abs(n3.currTime-value);
-          n3.animateGraph(n3.currTime, valIndex[value], duration, true);
+          //Check to see if event originated from slider control or elsewhere
+          var target = d3.select(ext.target);
+          if (target.classed('d3-slider-handle') || target.classed('d3-slider')) {
+            n3.endAnimation();
+            var duration = n3.options.scrubDuration/Math.abs(n3.currTime-value);
+            n3.animateGraph(n3.currTime, valIndex[value], duration, true);
+          }
         })
         
         n3.slider.on('slideend', function() {
@@ -673,8 +680,8 @@
 
     var lines = n3.container.select('.edges').selectAll('.edge').data(n3.dataFilter('edge'), function(e) { return e.id})
       lines.enter().append('path')
-        .attr('class', 'edge')
         .attr({
+          class: function(d) { return 'edge edge_'+d.id; },     
           d: function(d) {return n3.getLineCoords(d, n3.prevTime);  },
           opacity: 0,
           "marker-end": function(d) { if(n3.timeLookup('usearrows')) { return "url(#arrowhead)"; }}
@@ -712,7 +719,7 @@
     var nodes = n3.container.select('.nodes').selectAll('.node').data(n3.dataFilter('node'), function(e) { return e.id});
       nodes.enter().append('path')
         .attr({
-          class: 'node',
+          class: function(d) { return 'node node_'+d.id; },
           d: function(d, i) { return n3.drawPolygon(d) },
           //cx: function(d, i) { return n3.xScale(n3.timeLookup('coord', i)[0]); },
           //cy: function(d, i) { return n3.yScale(n3.timeLookup('coord', i)[1]); },
@@ -724,15 +731,13 @@
           'stroke-width': function(d) {return n3.timeLookup('vertex.lwd', d.id); },
           'stroke': function(d) {return n3.timeLookup('vertex.border', d.id); },
         }).on('click', function(d) {
-          var coords = n3.timeLookup('coord', d.id);
-          var offset = $(n3.container.node()).position();
-          n3.tooltip.style({
-            display: 'block',
-            top: (n3.yScale(coords[1])+offset.top)+'px',
-            left: (n3.xScale(coords[0])+offset.left)+'px',
-          }).html(d.id)
-          console.log(n3.xScale(coords[0]))
-          console.log(offset);
+          if(! n3.selectedNode || n3.selectedNode.id !== d.id) {
+            n3.selectedNode = d;
+            n3.moveTooltip();
+          } else {
+            n3.selectedNode = null;
+            n3.tooltip.style('display', 'none');
+          }
         })
         .transition()
         .duration(edgeDuration)
@@ -762,8 +767,8 @@
 
     var labels = n3.container.select('.labels').selectAll('text').data(n3.dataFilter('node'), function(e) { return e.id});
       labels.enter().append('text').filter(function(d) { return n3.timeLookup('displaylabels', 0)})
-        .attr('class', 'label')
         .attr({
+          class: function(d) { return 'label label_'+d.id; },
           x: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0])+n3.options.labelOffset.x; },
           y: function(d, i) { return n3.yScale(n3.timeLookup('coord', d.id)[1])+n3.options.labelOffset.y; },
           opacity: 0
@@ -788,7 +793,6 @@
         .style({
           'fill': function(d) {return n3.timeLookup('label.col', d.id); },
         })
-
 
       labels.exit()
         .transition()
@@ -815,7 +819,7 @@
         x: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0])+n3.options.labelOffset.x; },
         y: function(d, i) { return n3.yScale(n3.timeLookup('coord', d.id)[1])+n3.options.labelOffset.y; },
       })
-
+    n3.moveTooltip();
     //redraw the slider control 
     if (n3.options.slider) {
       var sliderDiv = n3.domTarget.select('.slider');
@@ -859,5 +863,18 @@
     clearTimeout(n3.animate);
   }
 
+  n3.prototype.moveTooltip = function() {
+    var n3 = this;
+    if (n3.selectedNode) {
+      var nodeDOM = n3.container.select('.node_'+n3.selectedNode.id).node();
+      var coords = nodeDOM.getBoundingClientRect();
+      var offset = $(n3.domTarget.node()).position();
+      n3.tooltip.style({
+        display: 'block',
+        top: (coords.top - offset.top-30)+'px', //FIXME - need to offset by rendered height
+        left: (coords.right - offset.left)+'px',
+      }).html('Node ID: '+n3.selectedNode.id)
+    }
+  }
   return n3;
 }));
