@@ -762,15 +762,14 @@
 
     var labels = n3.container.select('.labels').selectAll('text').data(n3.dataFilter('node'), function(e) { return e.id});
       labels.enter().append('text').filter(function(d) { return n3.timeLookup('displaylabels', 0)})
+        .attr('class', 'label')
         .attr({
-          class: 'label',
           x: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0])+n3.options.labelOffset.x; },
           y: function(d, i) { return n3.yScale(n3.timeLookup('coord', d.id)[1])+n3.options.labelOffset.y; },
           opacity: 0
         })
         .text(function(d, i) { return n3.timeLookup('label', d.id); })
         .style({
-          'stroke': function(d) {return n3.timeLookup('label.col', d.id); },
           'fill': function(d) {return n3.timeLookup('label.col', d.id); },
         })
         .transition()
@@ -787,7 +786,6 @@
         })
         .text(function(d, i) { return n3.timeLookup('label', d.id); })
         .style({
-          'stroke': function(d) {return n3.timeLookup('label.col', d.id); },
           'fill': function(d) {return n3.timeLookup('label.col', d.id); },
         })
 
