@@ -57,23 +57,6 @@
     $.extend(true, n3.options, default_options);
     $.extend(true, n3.options, opts);
 
-    if (!target) {
-      target = d3.select('body').append('div').style({width: '100%', height: '100%'}).node();
-      d3.selectAll('html, body').classed({'ndtv-fullscreen': true})
-    }
-    n3.domTarget = d3.select(target);
-    n3.domTarget.classed({'ndtv-d3-container': true});
-    n3.SVGSetup();
-    if (n3.options.playControls || n3.options.slider) {
-      n3.domTarget.append('div').attr('class', 'controls');
-    }
-    if (n3.options.dataChooser) { n3.createDataChooser(); }
-    if (n3.options.playControls) { n3.createPlayControls(); }
-    if (n3.options.slider) { n3.createSliderControl(); }
-
-    n3.tooltip = n3.domTarget.append('div').attr('class', 'tooltip')
-    if(n3.options.graphData) { n3.loadData(n3.options.graphData); }
-
     n3.drawCircleNode = function(selection){
       selection.attr({
         cx: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0]); },
@@ -107,6 +90,23 @@
         },
       })
     }
+
+    if (!target) {
+      target = d3.select('body').append('div').style({width: '100%', height: '100%'}).node();
+      d3.selectAll('html, body').classed({'ndtv-fullscreen': true})
+    }
+    n3.domTarget = d3.select(target);
+    n3.domTarget.classed({'ndtv-d3-container': true});
+    n3.SVGSetup();
+    if (n3.options.playControls || n3.options.slider) {
+      n3.domTarget.append('div').attr('class', 'controls');
+    }
+    if (n3.options.dataChooser) { n3.createDataChooser(); }
+    if (n3.options.playControls) { n3.createPlayControls(); }
+    if (n3.options.slider) { n3.createSliderControl(); }
+
+    n3.tooltip = n3.domTarget.append('div').attr('class', 'tooltip')
+    if(n3.options.graphData) { n3.loadData(n3.options.graphData); }
   }
 
   n3.prototype.SVGSetup = function() {
