@@ -73,6 +73,41 @@
 
     n3.tooltip = n3.domTarget.append('div').attr('class', 'tooltip')
     if(n3.options.graphData) { n3.loadData(n3.options.graphData); }
+
+    n3.drawCircleNode = function(selection){
+      selection.attr({
+        cx: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0]); },
+        cy: function(d, i) { return n3.yScale(n3.timeLookup('coord', d.id)[1]); },
+        r: function(d, i) { return n3.timeLookup('vertex.cex', d.id) * n3.baseNodeSize; },
+      })
+    }
+
+    n3.drawPolygonNode = function(selection){
+      selection.attr({
+        d: function(d, i) { 
+          //return n3.drawPolygon(d) 
+          var sides = n3.timeLookup('vertex.sides', d.id);
+          var size = n3.timeLookup('vertex.cex', d.id) * n3.baseNodeSize;
+          var coords = n3.timeLookup('coord', d.id);
+          var rotation = n3.timeLookup('vertex.rot', d.id)
+          var centerX = n3.xScale(coords[0]);
+          var centerY = n3.yScale(coords[1]);
+
+          var rot = rotation * 2 * Math.PI/360
+          var base = 1/sides * 2 * Math.PI;
+          var poly = [];
+
+          for (var i = 1; i <= sides; i++) {
+              var ang = i * base + rot;
+              var x = centerX + size * Math.cos(ang);
+              var y = centerY + size * Math.sin(ang);
+              poly.push([x, y]);
+          }
+          return drawLine()(poly) + 'Z';
+        },
+      })
+    }
+
   }
 
   n3.prototype.SVGSetup = function() {
@@ -386,28 +421,9 @@
       .x(function(d){return d[0];})
       .y(function(d){return d[1];})
   }
+  
+  
 
-  n3.prototype.drawPolygon = function(d) { //sides, size, centerx, centery, rotation) { 
-    var n3 = this;
-    var sides = n3.timeLookup('vertex.sides', d.id);
-    var size = n3.timeLookup('vertex.cex', d.id) * n3.baseNodeSize;
-    var coords = n3.timeLookup('coord', d.id);
-    var rotation = n3.timeLookup('vertex.rot', d.id)
-    var centerX = n3.xScale(coords[0]);
-    var centerY = n3.yScale(coords[1]);
-
-    var rot = rotation * 2 * Math.PI/360
-    var base = 1/sides * 2 * Math.PI;
-    var poly = [];
-
-    for (var i = 1; i <= sides; i++) {
-        var ang = i * base + rot;
-        var x = centerX + size * Math.cos(ang);
-        var y = centerY + size * Math.sin(ang);
-        poly.push([x, y]);
-    }
-    return drawLine()(poly) + 'Z';
-  }
   
   // look up the coordinates for an edge given the time
   n3.prototype.getLineCoords = function(d, time) {
@@ -586,6 +602,11 @@
       .duration(!(n3.currTime == 0 && n3.prevTime ==0) * duration) //show immediately if this is the first load
       .style({fill: n3.timeLookup('bg')});
 
+    //Set arrowheads to be color of first edge
+    n3.domTarget.select('#arrowhead path').attr('fill', n3.timeLookup('edge.col', 1));
+
+
+
     var lines = n3.container.select('.edges').selectAll('.edge').data(n3.dataFilter('edge'), function(e) { return e.id})
       lines.enter().append('path')
         .attr({
@@ -624,54 +645,61 @@
           'stroke-width': function(d) { return n3.timeLookup('edge.lwd', d.id); },
         })
 
-    var nodes = n3.container.select('.nodes').selectAll('.node').data(n3.dataFilter('node'), function(e) { return e.id});
-      nodes.enter().append('path')
+
+        // .filter(function(n) { return n3.timeLookup('vertex.sides', n.id) != 50; })
+
+    var nodeClick = function(d) {
+      if(! n3.selectedNode || n3.selectedNode.id !== d.id) {
+        n3.selectedNode = d;
+        n3.moveTooltip();
+      } else {
+        n3.selectedNode = null;
+        n3.tooltip.style('display', 'none');
+      }
+    }
+
+    var styleNodes = function(selection) {
+      selection.style({
+        'fill': function(d, i) {return n3.timeLookup('vertex.col', d.id); },
+        'stroke-width': function(d) {return n3.timeLookup('vertex.lwd', d.id); },
+        'stroke': function(d) {return n3.timeLookup('vertex.border', d.id); },
+      })
+      selection.filter('circle').call(n3.drawCircleNode)
+      selection.filter('path').call(n3.drawPolygonNode)
+    }
+
+    var createNodes = function(selection) {
+      selection
         .attr({
           class: function(d) { return 'node node_'+d.id; },
-          d: function(d, i) { return n3.drawPolygon(d) },
-          //cx: function(d, i) { return n3.xScale(n3.timeLookup('coord', i)[0]); },
-          //cy: function(d, i) { return n3.yScale(n3.timeLookup('coord', i)[1]); },
-          //r: function(d, i) { return n3.timeLookup('vertex.cex', i) * baseNodeSize; },
           opacity: 0,
         })
-        .style({
-          'fill': function(d, i) {return n3.timeLookup('vertex.col', d.id); },
-          'stroke-width': function(d) {return n3.timeLookup('vertex.lwd', d.id); },
-          'stroke': function(d) {return n3.timeLookup('vertex.border', d.id); },
-        }).on('click', function(d) {
-          if(! n3.selectedNode || n3.selectedNode.id !== d.id) {
-            n3.selectedNode = d;
-            n3.moveTooltip();
-          } else {
-            n3.selectedNode = null;
-            n3.tooltip.style('display', 'none');
-          }
-        })
+        .call(styleNodes)
+        .on('click', nodeClick)
         .transition()
         .duration(edgeDuration)
         .attr('opacity', 1)
+    }
+   
 
-      nodes.transition()
+
+    var nodes = n3.container.select('.nodes').selectAll('.node').data(n3.dataFilter('node'), function(e) { return e.id})
+      var node_groups = nodes.enter().append('g');
+      node_groups.filter(function(n) { return  n3.timeLookup('vertex.sides', n.id) != 50;}).append('path').call(createNodes);
+      node_groups.filter(function(n) { return  n3.timeLookup('vertex.sides', n.id) == 50;}).append('circle').call(createNodes);
+
+      nodes.filter('.node').transition()
         .delay(edgeDuration)
         .duration(nodeDuration)
         .attr({
-          d: function(d, i) { return n3.drawPolygon(d) },
-          // cx: function(d, i) { return n3.xScale(n3.timeLookup('coord', i)[0]); },
-          // cy: function(d, i) { return n3.yScale(n3.timeLookup('coord', i)[1]); },
-          // r: function(d, i) { return n3.timeLookup('vertex.cex', i) * baseNodeSize; },
           opacity: 1
-        })
-        .style({
-          'fill': function(d, i) {return n3.timeLookup('vertex.col', d.id); },
-          'stroke-width': function(d) {return n3.timeLookup('vertex.lwd', d.id); },
-          'stroke': function(d) {return n3.timeLookup('vertex.border', d.id); },
-        })
+        }).call(styleNodes)
 
       nodes.exit()
         .transition()
         .duration(edgeDuration)
         .attr('opacity', 0)
-        .remove();
+        .remove(); 
 
     var labels = n3.container.select('.labels').selectAll('text').data(n3.dataFilter('node'), function(e) { return e.id});
       labels.enter().append('text').filter(function(d) { return n3.timeLookup('displaylabels') !== false; })
@@ -723,21 +751,20 @@
   n3.prototype.resizeGraph = function() {
     var n3 = this;
     n3.initScales();
-    var lines = n3.container.select('.edges').selectAll('.edge').data(n3.dataFilter('edge'), function(e) { return e.id})
+    var lines = n3.container.select('.edges').selectAll('.edge')
       .attr({
         d: function(d) { return n3.getLineCoords(d, n3.currTime); },
       });
 
-    var nodes = n3.container.select('.nodes').selectAll('.node').data(n3.dataFilter('node'), function(e) { return e.id})
-      .attr({
-        d: function(d, i) { return n3.drawPolygon(d) },
-      });
+    n3.container.selectAll('circle.node').call(n3.drawCircleNode)
+    n3.container.selectAll('path.node').call(n3.drawCircleNode)
 
-    var labels = n3.container.select('.labels').selectAll('text').data(n3.dataFilter('node'), function(e) { return e.id})
+    var labels = n3.container.select('.labels').selectAll('text')
       .attr({
         x: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0])+n3.options.labelOffset.x; },
         y: function(d, i) { return n3.yScale(n3.timeLookup('coord', d.id)[1])+n3.options.labelOffset.y; },
       })
+      
     n3.moveTooltip();
     //redraw the slider control 
     if (n3.options.slider) {
