@@ -534,7 +534,7 @@
         n3.slider = d3.slider().axis(true).step(n3.interval);
         n3.slider.margin(35)
         n3.slider.min(n3.minTime)
-        n3.slider.max(n3.maxTime-n3.interval+sliceInfo['aggregate.dur'][0])
+        n3.slider.max(n3.maxTime+sliceInfo['aggregate.dur'][0])
         n3.slider.animate(n3.options.animationDuration)
         n3.slider.value(n3.minTime)
         n3.slider.interval(sliceInfo['aggregate.dur'][0])
@@ -777,10 +777,10 @@
   // function to 'play' animation or jump to a specific point in time
   n3.prototype.animateGraph = function(time, endTime, duration, noUpdate) {
     var n3 = this;
-    if (time > n3.maxTime-1 || time < n3.minTime) { return; }
+    if (time > n3.timeIndex.length -1 || time < 0) { return; }
 
     duration = duration === undefined ? n3.options.animationDuration : duration;
-    endTime = endTime === undefined ? n3.maxTime : endTime;
+    endTime = endTime === undefined ? n3.timeIndex.length -1 : endTime;
     var nextTime;
     if (time == endTime) {
       nextTime = time;

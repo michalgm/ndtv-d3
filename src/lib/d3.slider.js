@@ -115,7 +115,7 @@ return function module() {
         
 
         sliderLength = parseInt(div.style("width"), 10);
-        handle1.style('width', ((scale(interval)*sliderLength)+20)+'px')
+        handle1.style('width', ((scale(interval)*sliderLength))+'px')
 
       } else { // Vertical
 
