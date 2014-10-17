@@ -12,8 +12,8 @@
     <script src="../src/js/ndtv-d3.js"></script>
     <script>
       //INIT GRAPH DATA HERE
-      graphData = {};
-      options = {};
+      var graphData = {};
+      var options = {};
       //END GRAPH DATA INIT
 	   
       //Insert init JS Here
