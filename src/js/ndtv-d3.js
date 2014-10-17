@@ -107,12 +107,10 @@
         },
       })
     }
-
   }
 
   n3.prototype.SVGSetup = function() {
     var n3 = this;
-    
 
     $(n3.domTarget).resize(function(n) { 
       n3.resizeGraph(n);
@@ -153,7 +151,8 @@
     var rect = svg.append("rect")
       .attr('class', 'background')
       .style("fill", "none")
-      .style("pointer-events", "all");
+      .style("pointer-events", "all")
+      .on('click', function() { n3.hideTooltip();})
 
     n3.container = svg.append("g")
       .attr('class', 'container')
@@ -429,9 +428,6 @@
       .y(function(d){return d[1];})
   }
   
-  
-
-  
   // look up the coordinates for an edge given the time
   n3.prototype.getLineCoords = function(d, time) {
     var n3 = this;
@@ -617,8 +613,7 @@
         n3.selected = d;
         n3.moveTooltip();
       } else {
-        n3.selected = null;
-        n3.tooltip.style('display', 'none');
+        n3.hideTooltip();
       }
     }
 
@@ -817,8 +812,7 @@
       var type = n3.selected.inl ? 'edge' : 'node';
       var nodeDOM = n3.container.select('.'+type+'_'+n3.selected.id).node();
       if (!nodeDOM) {
-        n3.tooltip.style('display', 'none');
-        n3.selected = null;
+        n3.hideTooltip();
       } else {
         var coords = nodeDOM.getBoundingClientRect();
         var offset = $(n3.domTarget.node()).position();
@@ -839,5 +833,12 @@
       }
     }
   }
+
+  n3.prototype.hideTooltip = function() {
+    var n3 = this;
+    n3.selected = null;
+    n3.tooltip.style('display', 'none');
+  }
+
   return n3;
 }));
