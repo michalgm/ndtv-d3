@@ -327,7 +327,8 @@
         type: 'graph',
       },
       'displaylabels': {  // should vertex labels be displayed
-        type:  'graph'
+        type:  'graph',
+        default: false
       },
       'bg' : {            // background color
         type: 'graph',
@@ -359,6 +360,9 @@
         type:  'node',
         default: 0
       },
+      'vertex.tooltip': {    // vertex tooltip value
+        type: 'vertex',
+      },
       'usearrows': {    // should arrows be drawn on edges?
         type: 'graph',
         default: true
@@ -378,6 +382,9 @@
       'edge.col': {    // edge stroke color
         type: 'edge',
         default: '#000'
+      },
+      'edge.tooltip': {    // edge tooltip value
+        type: 'edge',
       }
     }
 
@@ -605,7 +612,15 @@
     //Set arrowheads to be color of first edge
     n3.domTarget.select('#arrowhead path').attr('fill', n3.timeLookup('edge.col', 1));
 
-
+    var showInfo = function(d) {
+      if(! n3.selected || n3.selected.id !== d.id) {
+        n3.selected = d;
+        n3.moveTooltip();
+      } else {
+        n3.selected = null;
+        n3.tooltip.style('display', 'none');
+      }
+    }
 
     var lines = n3.container.select('.edges').selectAll('.edge').data(n3.dataFilter('edge'), function(e) { return e.id})
       lines.enter().append('path')
@@ -619,6 +634,7 @@
           'stroke': 'green',
           'stroke-width': function(d) { return n3.timeLookup('edge.lwd', d.id); }
         })
+        .on('click', showInfo)
         .transition()
         .duration(edgeDuration)
         .attr({opacity: 1})
@@ -645,19 +661,6 @@
           'stroke-width': function(d) { return n3.timeLookup('edge.lwd', d.id); },
         })
 
-
-        // .filter(function(n) { return n3.timeLookup('vertex.sides', n.id) != 50; })
-
-    var nodeClick = function(d) {
-      if(! n3.selectedNode || n3.selectedNode.id !== d.id) {
-        n3.selectedNode = d;
-        n3.moveTooltip();
-      } else {
-        n3.selectedNode = null;
-        n3.tooltip.style('display', 'none');
-      }
-    }
-
     var styleNodes = function(selection) {
       selection.style({
         'fill': function(d, i) {return n3.timeLookup('vertex.col', d.id); },
@@ -675,13 +678,11 @@
           opacity: 0,
         })
         .call(styleNodes)
-        .on('click', nodeClick)
+        .on('click', showInfo)
         .transition()
         .duration(edgeDuration)
         .attr('opacity', 1)
     }
-   
-
 
     var nodes = n3.container.select('.nodes').selectAll('.node').data(n3.dataFilter('node'), function(e) { return e.id})
       var node_groups = nodes.enter().append('g');
@@ -812,19 +813,29 @@
 
   n3.prototype.moveTooltip = function() {
     var n3 = this;
-    if (n3.selectedNode) {
-      var nodeDOM = n3.container.select('.node_'+n3.selectedNode.id).node();
+    if (n3.selected) {
+      var type = n3.selected.inl ? 'edge' : 'node';
+      var nodeDOM = n3.container.select('.'+type+'_'+n3.selected.id).node();
       if (!nodeDOM) {
-        n3.selectedNode = null;
-        return;
+        n3.tooltip.style('display', 'none');
+        n3.selected = null;
       } else {
         var coords = nodeDOM.getBoundingClientRect();
         var offset = $(n3.domTarget.node()).position();
+        var top = coords.top - offset.top-30;
+        var left = coords.right - offset.left;
+        var property = 'vertex.tooltip';
+        if (type == 'edge') {
+          top += coords.height/2;
+          left -= coords.width/2;
+          property = 'edge.tooltip';
+        }
+        var html = n3.timeLookup(property, n3.selected.id) || type+" id: "+n3.selected.id;
         n3.tooltip.style({
           display: 'block',
-          top: (coords.top - offset.top-30)+'px', //FIXME - need to offset by rendered height
-          left: (coords.right - offset.left)+'px',
-        }).html('Node ID: '+n3.selectedNode.id)
+          top: top+'px', //FIXME - need to offset by rendered height
+          left: left+'px',
+        }).html(html)
       }
     }
   }
