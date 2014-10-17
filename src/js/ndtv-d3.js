@@ -231,17 +231,16 @@
     var pixelSpace = height > width ? width : height;
     n3.baseNodeSize = pixelSpace * n3.options.nodeSizeFactor;
 
+    //set the X and Y scales
     n3.xScale = d3.scale.linear()
       .domain([n3.timeIndex[0].data.xlim[0],n3.timeIndex[0].data.xlim[1]])
-//      .domain([n3.graph.gal['xlim.active'][0][0].xlim[0],n3.graph.gal['xlim.active'][0][0].xlim[1]])
       .range([0, pixelSpace]);
 
     n3.yScale = d3.scale.linear()
       .domain([n3.timeIndex[0].data.ylim[0],n3.timeIndex[0].data.ylim[1]])
-      //.domain([n3.graph.gal['ylim.active'][0][0].ylim[0],n3.graph.gal['ylim.active'][0][0].ylim[1]])
       .range([pixelSpace, 0]);
 
-    //define zooming behavior
+    //reset zoom translate based on margins
     n3.zoom.translate([margin.x, margin.y+mainMargin])
 
   }
@@ -384,7 +383,31 @@
       },
       'edge.tooltip': {    // edge tooltip value
         type: 'edge',
-      }
+      },
+      'vertex.css.class': {         //css class name applied to node
+        type: 'node',
+      },
+      'vertex.label.css.class': {   //css class name applied to node label
+        type: 'node',
+      },
+      'edge.css.class': {           //css class name applied to edge
+        type: 'edge',
+      },
+      'edge.label.css.class': {     //css class name applied to edge label
+        type: 'edge'
+      },
+      'vertex.css.style': {         //css inline style applied to node
+        type: 'node'
+      },
+      'vertex.label.css.style': {   //css inline style applied to node label
+        type: 'node'
+      },
+      'edge.css.style': {           //css inline style applied to edge
+        type: 'edge'
+      },
+      'edge.label.css.style': {     //css inline style applied to edge label
+        type: 'edge'
+      },
     }
 
     var type = properties[property].type;
@@ -530,7 +553,6 @@
 
       if(n3.options.slider) {
         var sliderDiv = n3.domTarget.select('.slider');
-        var slider_active = false;
 
         sliderDiv.html('');
 
@@ -543,7 +565,7 @@
         n3.slider.interval(sliceInfo['aggregate.dur'][0])
         n3.slider.on('slide', function(ext, value) {
           //Check to see if event originated from slider control or elsewhere
-          if (slider_active) { 
+          if (event.type == 'drag' || d3.select(event.target).classed({'d3-slider': true})) {
             n3.endAnimation();
             var duration = n3.options.scrubDuration/Math.abs(n3.currTime-value);
             n3.animateGraph(n3.currTime, valIndex[value], duration, true);
@@ -554,11 +576,7 @@
           n3.slider.animate(n3.options.animationDuration);
         })
         sliderDiv.on('mousedown', function(e) { 
-          slider_active = true;
           n3.slider.animate(n3.options.scrubDuration);
-        })
-        sliderDiv.on('mouseup', function(e){
-          slider_active = false;
         })
 
         sliderDiv.call(n3.slider);
@@ -620,7 +638,7 @@
     var lines = n3.container.select('.edges').selectAll('.edge').data(n3.dataFilter('edge'), function(e) { return e.id})
       lines.enter().append('path')
         .attr({
-          class: function(d) { return 'edge edge_'+d.id; },     
+          class: function(d) { return 'edge edge_'+d.id+' '+(n3.timeLookup('edge.css.class', d.id) || ''); },     
           d: function(d) {return n3.getLineCoords(d, n3.prevTime);  },
           opacity: 0,
           "marker-end": function(d) { if(n3.timeLookup('usearrows')) { return "url(#arrowhead)"; }}
@@ -669,7 +687,7 @@
     var createNodes = function(selection) {
       selection
         .attr({
-          class: function(d) { return 'node node_'+d.id; },
+          class: function(d) { return 'node node_'+d.id+' '+(n3.timeLookup('vertex.css.class', d.id) || ''); },
           opacity: 0,
         })
         .call(styleNodes)
@@ -700,7 +718,7 @@
     var labels = n3.container.select('.labels').selectAll('text').data(n3.dataFilter('node'), function(e) { return e.id});
       labels.enter().append('text').filter(function(d) { return n3.timeLookup('displaylabels') !== false; })
         .attr({
-          class: function(d) { return 'label label_'+d.id; },
+          class: function(d) { return 'label label_'+d.id+ ' '+ (n3.timeLookup('vertex.label.css.class', d.id) || ''); },
           x: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0])+n3.options.labelOffset.x; },
           y: function(d, i) { return n3.yScale(n3.timeLookup('coord', d.id)[1])+n3.options.labelOffset.y; },
           opacity: 0

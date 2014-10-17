@@ -104,6 +104,10 @@
   box-sizing: border-box;
 }
 
+.d3-slider-handle {
+  min-width: 10px;
+}
+
 .d3-slider.axis {
   height: 20px;
 }
