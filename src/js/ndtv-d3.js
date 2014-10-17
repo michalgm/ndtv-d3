@@ -764,7 +764,7 @@
         x: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0])+n3.options.labelOffset.x; },
         y: function(d, i) { return n3.yScale(n3.timeLookup('coord', d.id)[1])+n3.options.labelOffset.y; },
       })
-      
+
     n3.moveTooltip();
     //redraw the slider control 
     if (n3.options.slider) {
@@ -807,6 +807,7 @@
   n3.prototype.endAnimation = function(){
     var n3 = this;
     clearTimeout(n3.animate);
+    n3.domTarget.selectAll('.node, .edge, .label, .d3-slider-handle').transition().duration(0)
   }
 
   n3.prototype.moveTooltip = function() {
