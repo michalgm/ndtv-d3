@@ -95,7 +95,7 @@ if(saveHTML){
                  main="Freeman's windsurfer contact network\nwith 7 day aggregation",
                  bg='yellow',
                  filename='inst/javascript/ndtv-d3/examples/data/windsurfers.html',
-                 output.mode='HTML'
+                 output.mode='HTML')
 }
 if(saveVideo){
 saveVideo(render.animation(windsurfers,
@@ -127,15 +127,99 @@ if(saveVideo){
 
 # example including edge and vertex labels
 render.d3movie(short.stergm.sim,
-               vertex.tooltip=function(slice){paste('name:',network.vertex.names(slice),
-                                                    'randomVal: ',runif(network.size(slice)),
-                                                    'wealth: ',slice%v%'wealth',
-                                                    'priorates',slice%v%'priorates',collapse="\n")},
-               edge.tooltip="<span style='color:blue'>I have a blue label!</span>"
-               displaylabels=FALSE
-               filename='tooltipTest.html')
-
+               vertex.tooltip=function(slice){paste('name:',network.vertex.names(slice),"<br>",
+                                                    'randomVal:',runif(network.size(slice)),"<br>",
+                                                    'wealth:',slice%v%'wealth',"<br>",
+                                                    'priorates:',slice%v%'priorates')},
+               edge.tooltip="<span style='color:blue'>I have a blue label!</span>",
+               displaylabels=FALSE,
+               filename='inst/javascript/ndtv-d3/examples/data/tooltipTest.json',output.mode='JSON')
+if(saveHTML){
+render.d3movie(short.stergm.sim,
+               vertex.tooltip=function(slice){paste('name:',network.vertex.names(slice),"<br>",
+                                                    'randomVal:',runif(network.size(slice)),"<br>",
+                                                    'wealth:',slice%v%'wealth',"<br>",
+                                                    'priorates:',slice%v%'priorates')},
+               edge.tooltip="<span style='color:blue'>I have a blue label!</span>",
+               displaylabels=FALSE,
+               filename='inst/javascript/ndtv-d3/examples/data/tooltipTest.html')
+}
 
 # example including html classes
 
+
+# epimodel example
+library(EpiModel)
+
+## Estimation
+nw <- network.initialize(n = 100, directed = FALSE)
+formation <- ~ edges
+target.stats <- 50
+dissolution <- ~ offset(edges)
+coef.diss <- dissolution_coefs(dissolution, duration = 10)
+est <- netest(nw,
+              formation,
+              dissolution,
+              target.stats,
+              coef.diss,
+              verbose = FALSE)
+
+## Epidemic simulation
+param <- param.net(inf.prob = 0.8)
+init <- init.net(i.num = 5)
+control <- control.net(type = "SI", nsteps = 25, nsims = 1, verbose =
+                         FALSE)
+sim <- netsim(est, param, init, control)
+
+
+## Movies
+nw.sim <- get_network(sim)
+nw.sim <- color_tea(nw.sim)
+
+slice.par <- list(start = 1, end = 25, interval = 1,
+                  aggregate.dur = 1, rule = "any")
+render.par <- list(tween.frames = 10, show.time = FALSE)
+plot.par <- list(mar = c(0, 0, 0, 0))
+
+compute.animation(nw.sim, slice.par = slice.par)
+
+render.d3movie(
+  nw.sim,
+  render.par = render.par,
+  plot.par = plot.par,
+  vertex.cex = 0.9,
+  vertex.col = "ndtvcol",
+  edge.col = "darkgrey",
+  vertex.border = "lightgrey",
+  displaylabels = FALSE,
+  vertex.tooltip = paste('name:',slice%v%'vertex.names','<br>','status:', slice%v%'testatus'),
+  filename='inst/javascript/ndtv-d3/examples/data/EpiSim.json',output.mode='JSON')
+
+if (saveHTML){
+render.d3movie(
+  nw.sim,
+  render.par = render.par,
+  plot.par = plot.par,
+  vertex.cex = 0.9,
+  vertex.col = "ndtvcol",
+  edge.col = "darkgrey",
+  vertex.border = "lightgrey",
+  displaylabels = FALSE,
+  vertex.tooltip = paste('name:',slice%v%'vertex.names','<br>','status:', slice%v%'testatus'),
+  filename='inst/javascript/ndtv-d3/examples/data/EpiSim.html')
+}
+
+if(saveVideo){
+
+saveVideo(render.animation(
+  nw.sim,
+  render.par = render.par,
+  plot.par = plot.par,
+  vertex.cex = 0.9,
+  vertex.col = "ndtvcol",
+  edge.col = "darkgrey",
+  vertex.border = "lightgrey",
+  displaylabels = FALSE,render.cache='none'), ani.width = 500, ani.height = 500, video.name='inst/javascript/ndtv-d3/examples/data/EpiSim.mp4')
+
+}
 
