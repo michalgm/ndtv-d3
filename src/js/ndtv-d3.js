@@ -360,7 +360,7 @@
         default: 0
       },
       'vertex.tooltip': {    // vertex tooltip value
-        type: 'vertex',
+        type: 'node',
       },
       'usearrows': {    // should arrows be drawn on edges?
         type: 'graph',
