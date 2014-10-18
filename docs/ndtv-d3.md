@@ -1,139 +1,129 @@
-# Global
+<a name="ndtv_d3"></a>
+#class: ndtv_d3
+**Members**
 
+* [class: ndtv_d3](#ndtv_d3)
+  * [new ndtv_d3()](#new_ndtv_d3)
+  * [ndtv_d3~n3](#ndtv_d3..n3)
+  * [ndtv_d3.SVGSetup()](#ndtv_d3#SVGSetup)
+    * [SVGSetup~n3](#ndtv_d3#SVGSetup..n3)
+  * [ndtv_d3.initScales()](#ndtv_d3#initScales)
+  * [ndtv_d3.createDataChooser()](#ndtv_d3#createDataChooser)
+  * [ndtv_d3.createPlayControls()](#ndtv_d3#createPlayControls)
+  * [ndtv_d3.createSliderControl()](#ndtv_d3#createSliderControl)
+  * [ndtv_d3.getLineCoords(d, usearrows, start)](#ndtv_d3#getLineCoords)
+  * [ndtv_d3.loadData(graphData)](#ndtv_d3#loadData)
+  * [ndtv_d3.drawGraph(duration)](#ndtv_d3#drawGraph)
+  * [ndtv_d3.resizeGraph()](#ndtv_d3#resizeGraph)
+  * [ndtv_d3.animateGraph(time, endTime, duration, noUpdate)](#ndtv_d3#animateGraph)
+  * [ndtv_d3.moveTooltip()](#ndtv_d3#moveTooltip)
+  * [ndtv_d3.hideTooltip()](#ndtv_d3#hideTooltip)
+  * [ndtv_d3.endAnimation(noHalt)](#ndtv_d3#endAnimation)
+  * [ndtv_d3.stepAnimation(reverse)](#ndtv_d3#stepAnimation)
+  * [ndtv_d3.playAnimation(reverse)](#ndtv_d3#playAnimation)
 
-
-
-
-* * *
-
-## Class: ndtv_d3
+<a name="new_ndtv_d3"></a>
+##new ndtv_d3()
 Initialize a new ndtv-d3 instance
 
-**default_options**:  , Public options to control visualization functionality
-**ndtvProperties**:  , Supported NDTV network properties and their default values
-### ndtv_d3.SVGSetup() 
+**Params**
 
+-  `object` - An object of default options overrides  
+-  `string` | `HTMLElement` - A CSS selector string or DOM element reference specifying the target dom element the network should be initialized to  
+
+<a name="ndtv_d3..n3"></a>
+##ndtv_d3~n3
+**Scope**: inner member of [ndtv_d3](#ndtv_d3)  
+<a name="ndtv_d3#SVGSetup"></a>
+##ndtv_d3.SVGSetup()
 Initialize the SVG element and related DOM elements and listeners
 
-
-### ndtv_d3.initScales() 
-
+<a name="ndtv_d3#initScales"></a>
+##ndtv_d3.initScales()
 sets positioning on svg elements based on current DOM container size and sets data scaling factors accordingly FIXME - rename?
 
-
-### ndtv_d3.createDataChooser() 
-
+<a name="ndtv_d3#createDataChooser"></a>
+##ndtv_d3.createDataChooser()
 creates the optional dataChooser element to be used for slecting among multiple JSON files for debugging
 
-
-### ndtv_d3.createPlayControls() 
-
+<a name="ndtv_d3#createPlayControls"></a>
+##ndtv_d3.createPlayControls()
 creates the optional play controls div using svg icons and defines the attached events
 
-
-### ndtv_d3.createSliderControl() 
-
+<a name="ndtv_d3#createSliderControl"></a>
+##ndtv_d3.createSliderControl()
 creates the time slider controls and defines attached events
 
-
-### ndtv_d3.getLineCoords(d, usearrows, start) 
-
+<a name="ndtv_d3#getLineCoords"></a>
+##ndtv_d3.getLineCoords(d, usearrows, start)
 look up the coordinates for an edge given the time
 
-**Parameters**
+**Params**
 
-**d**: `object`, the D3 data object
+- d `object` - the D3 data object  
+- usearrows `boolean` - If true, positions end of line offset of node radius to accomodate arrowhead  
+- start `boolean` - If true, draws path using current node positions (before animation begins)  
 
-**usearrows**: `boolean`, If true, positions end of line offset of node radius to accomodate arrowhead
-
-**start**: `boolean`, If true, draws path using current node positions (before animation begins)
-
-
-### ndtv_d3.loadData(graphData) 
-
+<a name="ndtv_d3#loadData"></a>
+##ndtv_d3.loadData(graphData)
 load and process the JSON formatted data
 
-**Parameters**
+**Params**
 
-**graphData**: `url | JSON`, either a NDTV-generated JSON object, or a URL path to file containing JSON data
+- graphData `url` | `JSON` - either a NDTV-generated JSON object, or a URL path to file containing JSON data  
 
-
-### ndtv_d3.drawGraph(duration) 
-
+<a name="ndtv_d3#drawGraph"></a>
+##ndtv_d3.drawGraph(duration)
 render the graph to reflect the state at currTime, transitioning elements over a given duration
 
-**Parameters**
+**Params**
 
-**duration**: `milliseconds`, the amount of time the transition animation should take
+- duration `milliseconds` - the amount of time the transition animation should take  
 
-
-### ndtv_d3.resizeGraph() 
-
+<a name="ndtv_d3#resizeGraph"></a>
+##ndtv_d3.resizeGraph()
 resizes graph and other display elements to fill the target viewport
 
-
-### ndtv_d3.animateGraph(time, endTime, duration, noUpdate) 
-
+<a name="ndtv_d3#animateGraph"></a>
+##ndtv_d3.animateGraph(time, endTime, duration, noUpdate)
 graph animation controller
 
-**Parameters**
+**Params**
 
-**time**: `integer`, render the graph to the state at this timeslice index
+- time `integer` - render the graph to the state at this timeslice index  
+- endTime `integer` - function will recursively call itself until time equals this value  
+- duration `milliseconds` - the amount of time the transition animation should take  
+- noUpdate `boolean` - don't update time slider - FIXME - do we really need this?  
 
-**endTime**: `integer`, function will recursively call itself until time equals this value
-
-**duration**: `milliseconds`, the amount of time the transition animation should take
-
-**noUpdate**: `boolean`, don't update time slider - FIXME - do we really need this?
-
-
-### ndtv_d3.moveTooltip() 
-
+<a name="ndtv_d3#moveTooltip"></a>
+##ndtv_d3.moveTooltip()
 redraw the info popover //FIXME - needs renamed
 
-
-### ndtv_d3.hideTooltip() 
-
+<a name="ndtv_d3#hideTooltip"></a>
+##ndtv_d3.hideTooltip()
 hide the tooltip and unset the selected global
 
-
-### ndtv_d3.endAnimation(noHalt) 
-
+<a name="ndtv_d3#endAnimation"></a>
+##ndtv_d3.endAnimation(noHalt)
 stop the current animation cycle
 
-**Parameters**
+**Params**
 
-**noHalt**: `boolean`, if true, immediate halt all active transitions (otherwise, let animation continue to next time slice)
+- noHalt `boolean` - if true, immediate halt all active transitions (otherwise, let animation continue to next time slice)  
 
-
-### ndtv_d3.stepAnimation(reverse) 
-
+<a name="ndtv_d3#stepAnimation"></a>
+##ndtv_d3.stepAnimation(reverse)
 step the animation by one time slice
 
-**Parameters**
+**Params**
 
-**reverse**: `boolean`, if true, go to previous time slice, else go forward
+- reverse `boolean` - if true, go to previous time slice, else go forward  
 
-
-### ndtv_d3.playAnimation(reverse) 
-
+<a name="ndtv_d3#playAnimation"></a>
+##ndtv_d3.playAnimation(reverse)
 animate the graph over all time slices, starting at current slice
 
-**Parameters**
+**Params**
 
-**reverse**: `boolean`, if true, animate slices backwards until beginning of time index, other play until end
-
-
-
-
-* * *
-
-
-
-
-
-
-
-
-
+- reverse `boolean` - if true, animate slices backwards until beginning of time index, other play until end  
 

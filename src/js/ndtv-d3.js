@@ -1,16 +1,19 @@
 (function (root, factory) {
+  /** @class */
   root.ndtv_d3 = factory();
 }(this, function() {
   "use strict";
 
-/**
-* Initialize a new ndtv-d3 instance
-* @constructor
-* @alias ndtv_d3
-* @param {object} options - An object of default options overrides
-* @param {string|HTMLElement} target - A CSS selector string or DOM element reference specifying the target dom element the network should be initialized to
-*/
+
+  /**
+  * Initialize a new ndtv-d3 instance
+  * @alias ndtv_d3
+  * @constructor
+  * @param {object} - An object of default options overrides
+  * @param {string|HTMLElement} - A CSS selector string or DOM element reference specifying the target dom element the network should be initialized to
+  */
   var n3 = function(options, target) {
+    /**@@this n3*/
     var n3 = this;
     
     var globals = {
@@ -38,7 +41,7 @@
     $.extend(true, n3.options, default_options);
     $.extend(true, n3.options, options);
 
-    /* initializes a D3 line drawing function
+    /** initializes a D3 line drawing function
     * @private */
     var drawLine = function() {
       return d3.svg.line()
@@ -46,8 +49,8 @@
         .y(function(d){return d[1];})
     }
 
-    /* creates circle attributes for given node selection
-    * @param {D3 selection}
+    /** creates circle attributes for given node selection
+    * @param {D3selection}
     * @private
     */
     this.drawCircleNode = function(selection){
@@ -58,8 +61,8 @@
       })
     }
 
-    /* creates a polygon-shaped path attribute for given node selection
-    * @param {D3 selection}
+    /** creates a polygon-shaped path attribute for given node selection
+    * @param {D3selection}
     * @private
     */
     this.drawPolygonNode = function(selection){
@@ -166,9 +169,9 @@
 
   /**
   * Initialize the SVG element and related DOM elements and listeners
-  * @method SVGSetup
   */
   n3.prototype.SVGSetup = function() {
+    /** @this n3 */
     var n3 = this;
 
     $(n3.domTarget).resize(function(n) { 
