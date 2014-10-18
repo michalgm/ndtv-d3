@@ -26,8 +26,6 @@
   };
 
   var properties = {
-    nodes: null,
-    edges: null,
     svg: null,
     xScale: null,
     yScale: null,
@@ -37,15 +35,49 @@
     animate: null,
     baseNodeSize: null,
     currTime: 0,
-    prevTime:0,
     graph: null,
     timeIndex:null,
     domTarget:null,
     slider:null,
-    node_coords: {},
+    nodeCoords: {},
     options: {}
   }
 
+  var ndtvProperties = {
+    graph: {
+      xlab: null,                     // label caption below the render, on the xaxis
+      main: null,                     // main headline above the render
+      displaylabels: false ,          // should vertex labels be displayed
+      bg: '#fff',                     // background color
+      usearrows: true,                // should arrows be drawn on edges?
+      xlim: null,                     // range of x values                     
+      ylim: null,                     // range of y values  
+    }, 
+    node: {
+      coord: null,                    // coordinates for nodes
+      'vertex.cex': 1,                // vertex (node) expansion scale factor
+      label: null,                    // labels for vertices
+      'label.col': '#000',            // color of node label
+      'vertex.col': '#F00',           // node fill color
+      'vertex.sides': 50,             // number of sides for vertex polygon (shape)
+      'vertex.rot': 0,                // rotation for vertex polygon
+      'vertex.tooltip': '',           // vertex tooltip value
+      'vertex.border': '#000',        // color of vertex border stroke
+      'vertex.css.class': null,       // css class name applied to node
+      'vertex.label.css.class': null, // css class name applied to node label
+      'vertex.css.style': null,       // css inline-style applied to node (UNIMPLIMENTED)
+      'vertex.label.css.style': null, // css inline style applied to node label (UNIMPLEMENTED)
+    },
+    edge: {
+      'edge.lwd': 1,                  // width of vertex border stroke
+      'edge.col': '#000',             // edge stroke color
+      'edge.tooltip': null,           // edge tooltip value
+      'edge.css.class': null,         // css class name applied to edge
+      'edge.label.css.class': null,   // css class name applied to edge label
+      'edge.css.style': null,         // css inline-style applied to edge (UNIMPLIMENTED)
+      'edge.label.css.style': null,   // css inline style applied to edge label (UNIMPLEMENTED)
+    }
+  }
   //constructor
   var n3 = function(opts, target) {
     var n3 = this;
@@ -59,20 +91,25 @@
 
     n3.drawCircleNode = function(selection){
       selection.attr({
-        cx: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0]); },
-        cy: function(d, i) { return n3.yScale(n3.timeLookup('coord', d.id)[1]); },
-        r: function(d, i) { return n3.timeLookup('vertex.cex', d.id) * n3.baseNodeSize; },
+        cx: function(d, i) { return n3.xScale(d.renderCoord[0]); },
+        cy: function(d, i) { return n3.yScale(d.renderCoord[1]); },
+        r: function(d, i) { return d['vertex.cex'] * n3.baseNodeSize; },
       })
+    }
+
+    var drawLine = function() {
+      return d3.svg.line()
+        .x(function(d){return d[0];})
+        .y(function(d){return d[1];})
     }
 
     n3.drawPolygonNode = function(selection){
       selection.attr({
         d: function(d, i) { 
-          //return n3.drawPolygon(d) 
-          var sides = n3.timeLookup('vertex.sides', d.id);
-          var size = n3.timeLookup('vertex.cex', d.id) * n3.baseNodeSize;
-          var coords = n3.timeLookup('coord', d.id);
-          var rotation = n3.timeLookup('vertex.rot', d.id)
+          var sides = d['vertex.sides'];
+          var size = d['vertex.cex'] * n3.baseNodeSize;
+          var coords = d.renderCoord;
+          var rotation = d['vertex.rot'];
           var centerX = n3.xScale(coords[0]);
           var centerY = n3.yScale(coords[1]);
 
@@ -118,32 +155,11 @@
     $(window).resize(function(n) { 
       n3.resizeGraph(n);
     });
-    
-    //define SVG icons to be used in the play controller
-    if (d3.select('#ndtv-svg-icons').empty()) {
-      $('body').prepend(
-      '<svg id="ndtv-svg-icons" display="none" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="176" height="32" viewBox="0 0 176 32">'+
-      '  <defs>'+
-      '    <g id="icon-play"><path class="path1" d="M26.717 15.179l-13.698-8.486c-0.998-0.654-1.814-0.171-1.814 1.072v16.474c0 1.243 0.818 1.725 1.814 1.070l13.699-8.486c0 0 0.486-0.342 0.486-0.822-0.002-0.478-0.488-0.821-0.488-0.821z"></path></g>'+
-      '    <g id="icon-pause"><path class="path1" d="M21.6 4.8c-1.59 0-2.88 0.49-2.88 2.080v18.24c0 1.59 1.29 2.080 2.88 2.080s2.88-0.49 2.88-2.080v-18.24c0-1.59-1.29-2.080-2.88-2.080zM10.4 4.8c-1.59 0-2.88 0.49-2.88 2.080v18.24c0 1.59 1.29 2.080 2.88 2.080s2.88-0.49 2.88-2.080v-18.24c0-1.59-1.29-2.080-2.88-2.080z"></path></g>'+
-      '    <g id="icon-first"><path class="path1" d="M11.976 16c0 0.413 0.419 0.707 0.419 0.707l11.64 7.31c0.862 0.565 1.565 0.149 1.565-0.92v-14.195c0-1.070-0.702-1.486-1.565-0.922l-11.64 7.312c0 0.002-0.419 0.294-0.419 0.707zM6.4 8.571v14.858c0 1.421 0.979 1.856 2.4 1.856s2.4-0.435 2.4-1.854v-14.859c0-1.422-0.979-1.858-2.4-1.858s-2.4 0.437-2.4 1.858z"></path></g>'+
-      '  </defs>'+
-      '</svg>');
-    }
+ 
     n3.domTarget
       .append('div').attr('class', 'graph')
       .append("svg:svg")
-      .append("defs").append("marker")
-        .attr("id", 'arrowhead')
-        .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 7)
-        .attr("refY", 0)
-        .attr("markerWidth", 6)
-        .attr("markerHeight", 6)
-        .attr("markerUnits", "strokeWidth")
-        .attr("orient", "auto")
-      .append("svg:path")
-        .attr("d", "M0,-5L10,0L0,5");
+      .append("defs")
 
     var svg = n3.domTarget.select('svg')
       .append('g')
@@ -177,7 +193,6 @@
       })
 
     svg.call(n3.zoom)
-
   }
 
   n3.prototype.initScales = function() {
@@ -185,8 +200,8 @@
     var div_width = n3.domTarget.node().offsetWidth
     var div_height = n3.domTarget.node().offsetHeight - $(n3.domTarget.select('.controls').node()).outerHeight(true);
 
-    var xlab = n3.timeLookup('xlab');
-    var main = n3.timeLookup('main');
+    var xlab = n3.timeIndex[n3.currTime].renderData.graph.xlab;
+    var main = n3.timeIndex[n3.currTime].renderData.graph.main;
     var xlabSize = parseFloat(window.getComputedStyle(n3.domTarget.select('.xlab').node(), null).getPropertyValue('font-size'));
     var mainSize = parseFloat(window.getComputedStyle(n3.domTarget.select('.main').node(), null).getPropertyValue('font-size'));
     var mainMargin = 0;
@@ -233,11 +248,11 @@
 
     //set the X and Y scales
     n3.xScale = d3.scale.linear()
-      .domain([n3.timeIndex[0].data.xlim[0],n3.timeIndex[0].data.xlim[1]])
+      .domain([n3.timeIndex[0].renderData.graph.xlim[0],n3.timeIndex[0].renderData.graph.xlim[1]])
       .range([0, pixelSpace]);
 
     n3.yScale = d3.scale.linear()
-      .domain([n3.timeIndex[0].data.ylim[0],n3.timeIndex[0].data.ylim[1]])
+      .domain([n3.timeIndex[0].renderData.graph.ylim[0],n3.timeIndex[0].renderData.graph.ylim[1]])
       .range([pixelSpace, 0]);
 
     //reset zoom translate based on margins
@@ -278,7 +293,18 @@
   // creates the play controls using svg icons and defines the attached events
   n3.prototype.createPlayControls = function() {
     var n3 = this;
-
+    
+    //define SVG icons to be used in the play controller
+    if (d3.select('#ndtv-svg-icons').empty()) {
+      $('body').prepend(
+      '<svg id="ndtv-svg-icons" display="none" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="176" height="32" viewBox="0 0 176 32">'+
+      '  <defs>'+
+      '    <g id="icon-play"><path class="path1" d="M26.717 15.179l-13.698-8.486c-0.998-0.654-1.814-0.171-1.814 1.072v16.474c0 1.243 0.818 1.725 1.814 1.070l13.699-8.486c0 0 0.486-0.342 0.486-0.822-0.002-0.478-0.488-0.821-0.488-0.821z"></path></g>'+
+      '    <g id="icon-pause"><path class="path1" d="M21.6 4.8c-1.59 0-2.88 0.49-2.88 2.080v18.24c0 1.59 1.29 2.080 2.88 2.080s2.88-0.49 2.88-2.080v-18.24c0-1.59-1.29-2.080-2.88-2.080zM10.4 4.8c-1.59 0-2.88 0.49-2.88 2.080v18.24c0 1.59 1.29 2.080 2.88 2.080s2.88-0.49 2.88-2.080v-18.24c0-1.59-1.29-2.080-2.88-2.080z"></path></g>'+
+      '    <g id="icon-first"><path class="path1" d="M11.976 16c0 0.413 0.419 0.707 0.419 0.707l11.64 7.31c0.862 0.565 1.565 0.149 1.565-0.92v-14.195c0-1.070-0.702-1.486-1.565-0.922l-11.64 7.312c0 0.002-0.419 0.294-0.419 0.707zM6.4 8.571v14.858c0 1.421 0.979 1.856 2.4 1.856s2.4-0.435 2.4-1.854v-14.859c0-1.422-0.979-1.858-2.4-1.858s-2.4 0.437-2.4 1.858z"></path></g>'+
+      '  </defs>'+
+      '</svg>');
+    }
     var div = n3.domTarget.select('.controls').append('div').attr('class', 'play-control-container');
     div.html(
       "<div><svg class='icon step-back-control' viewBox='0 0 32 32'><use xlink:href='#icon-first'></use></svg></div>"+
@@ -288,11 +314,11 @@
       "<div><svg class='icon step-forward-control' viewBox='0 0 32 32'><g transform='rotate(180, 16, 16)'><use xlink:href='#icon-first'></use></g></svg></div>"
     );
 
-    div.select('.step-back-control').on('click', function() { n3.animateGraph(n3.currTime-1, n3.currTime-1); });
-    div.select('.play-back-control').on('click', function() { n3.animateGraph(n3.currTime-1, 0); });
+    div.select('.step-back-control').on('click', function() { n3.stepAnimation(1); });
+    div.select('.play-back-control').on('click', function() { n3.playAnimation(1); });
     div.select('.pause-control').on('click', function() { n3.endAnimation(); });
-    div.select('.play-forward-control').on('click', function() { n3.animateGraph(n3.currTime+1); });
-    div.select('.step-forward-control').on('click', function() { n3.animateGraph(n3.currTime+1, n3.currTime+1); });
+    div.select('.play-forward-control').on('click', function() { n3.playAnimation(); });
+    div.select('.step-forward-control').on('click', function() { n3.stepAnimation(); });
   }
   
   // creates the time slider controls and defines attached events
@@ -301,185 +327,21 @@
     n3.domTarget.select('.controls').append('div').attr('class', 'slider-control-container').append('div').attr('class', 'slider');
   }
 
-  // define the data filter used to determine which events should be returned for the current time
-  n3.prototype.dataFilter = function(type) {
-    var n3 = this;
-    var dataList = type == 'node' ? n3.nodes : n3.edges;
-
-    return $.grep(dataList, function(item, i) {
-      return n3.timeIndex[n3.currTime].data.active[type+'s'][item.id];
-    });
-  }
-
-  // listing of all the known properties and which type of element (node, edge, graph) they belong to
-  n3.prototype.timeLookup = function(property, index, time) {
-    var n3 = this;
-    time = time === undefined ? n3.currTime : time;
-    
-    var data = n3.timeIndex[time].data;
-    var properties = {
-      'xlab': {           // label caption below the render, on the xaxis
-        type: 'graph',
-      },
-      'main': {           // main headline above the render
-        type: 'graph',
-      },
-      'displaylabels': {  // should vertex labels be displayed
-        type:  'graph',
-        default: false
-      },
-      'bg' : {            // background color
-        type: 'graph',
-        default: '#fff'
-      },
-      'coord': {          // coordinates for nodes
-        type:  'node'
-      },
-      'vertex.cex': {    // vertex (node) expansion scale factor
-        type:  'node',
-        default: 1
-      },
-      'label': {        // labels for vertices
-        type:  'node'
-      },
-      'label.col': {    // color of node label
-        type:  'node',
-        default: '#000'
-      },
-      'vertex.col': {   // node fill color
-        type:  'node',
-        default: '#f00'
-      },
-      'vertex.sides': {  // number of sides for vertex polygon (shape)
-        type:  'node',
-        default: 50
-      },
-      'vertex.rot': {   // rotation for vertex polygon
-        type:  'node',
-        default: 0
-      },
-      'vertex.tooltip': {    // vertex tooltip value
-        type: 'node',
-      },
-      'usearrows': {    // should arrows be drawn on edges?
-        type: 'graph',
-        default: true
-      },
-      'vertex.border': { // color of vertex border stroke
-        type: 'node',
-        default: '#000'
-      },
-      'vertex.lwd': {   // width of vertex border stroke
-        type: 'node',
-        default: '1'
-      },
-      'edge.lwd': {     // width of edge stroke
-        type: 'edge',
-        default: '1'
-      },
-      'edge.col': {    // edge stroke color
-        type: 'edge',
-        default: '#000'
-      },
-      'edge.tooltip': {    // edge tooltip value
-        type: 'edge',
-      },
-      'vertex.css.class': {         //css class name applied to node
-        type: 'node',
-      },
-      'vertex.label.css.class': {   //css class name applied to node label
-        type: 'node',
-      },
-      'edge.css.class': {           //css class name applied to edge
-        type: 'edge',
-      },
-      'edge.label.css.class': {     //css class name applied to edge label
-        type: 'edge'
-      },
-      'vertex.css.style': {         //css inline style applied to node
-        type: 'node'
-      },
-      'vertex.label.css.style': {   //css inline style applied to node label
-        type: 'node'
-      },
-      'edge.css.style': {           //css inline style applied to edge
-        type: 'edge'
-      },
-      'edge.label.css.style': {     //css inline style applied to edge label
-        type: 'edge'
-      },
-    }
-
-    var type = properties[property].type;
-    var value = properties[property].default;
-
-    if (data[property] !== undefined) {
-      if (type == 'graph') {
-        if (data[property] !== undefined) {
-          value = data[property][0];
-        }
-      } else {
-        var lookup = data.active[type+'s'][index];
-        if (lookup === undefined) {
-          console.log('attempting to access property '+property+ ' for inactive '+type+' id '+index);
-        } else if (data[property][lookup] !== undefined) {
-          value = data[property][lookup];
-        }
-      }
-    }
-    if (property == 'coord') {
-      if (value) {
-        if (time == n3.currTime) {
-          n3.node_coords[index] = value;
-        }
-      } else {
-        value = n3.node_coords[index]
-        console.log('missing coordinates for node '+index+ ' at time '+time+' ('+n3.timeIndex[time].start+'-'+n3.timeIndex[time].end+')');
-        console.log('valid time slices for node '+index+' are '+n3.graph.val[index].active.join(','))
-        console.log('filling in with last know position: '+value)
-      }
-    }
-    if (value && (property == 'main' || property == 'xlab')) {
-      value = value.split('\n');
-    }
-    return value;
-  }
-
-  var drawLine = function() {
-    return d3.svg.line()
-      .x(function(d){return d[0];})
-      .y(function(d){return d[1];})
-  }
-  
   // look up the coordinates for an edge given the time
-  n3.prototype.getLineCoords = function(d, time) {
+  n3.prototype.getLineCoords = function(d, usearrows, start) {
     var n3 = this;
-    var time1 = time; 
-    var time2 = time;
-    if (time == n3.prevTime) {
-      if (n3.timeIndex[time].data.active.nodes[d.inl[0]] === undefined) { time1 = n3.currTime; }
-      if (n3.timeIndex[time].data.active.nodes[d.outl[0]] === undefined) { time2 = n3.currTime; }
-    }
-    var coord1 = n3.timeLookup('coord', d.inl[0], time1);
-    var coord2 = n3.timeLookup('coord', d.outl[0], time2);
-    $.each([coord1, coord2], function(i, c) {
-      var type = i ? 'in' : 'out';
-      if (! c ) {
-        console.log('missing '+type+'-node coords for edge '+d.id+' ('+d.inl[0]+'->'+d.outl[0]+') at time '+time);
-        console.log('valid edge time slices are '+n3.graph.mel[d.id-1].atl.active.join(','))   
-      }
-      if (n3.xScale(c[0]) == NaN || n3.yScale(c[1]) == NaN) {
-        console.log('invalic '+type+'-node coords for edge '+d.id+' ('+d.inl[0]+'->'+d.outl[0]+') at time '+time);
-        console.log(c);
-        console.log('valid edge time slices are '+n3.graph.mel[d.id-1].atl.active.join(','))   
-      }
-    })
-    var x1 = n3.xScale(coord1[0]);
-    var y1 = n3.yScale(coord1[1]);
-    var x2 = n3.xScale(coord2[0]);
-    var y2 = n3.yScale(coord2[1]);
-    if(n3.timeLookup('usearrows', 0, time)) {
-      var radius = n3.timeLookup('vertex.cex', d.outl[0], time) * n3.baseNodeSize + 2;
+
+    var type = start ? 'startCoords' : 'coords';
+
+    var startNode = d.inl[type];
+    var endNode = d.outl[type];
+
+    var x1 = n3.xScale(startNode.coord[0]);
+    var y1 = n3.yScale(startNode.coord[1]);
+    var x2 = n3.xScale(endNode.coord[0]);
+    var y2 = n3.yScale(endNode.coord[1]);
+    if(usearrows) {
+      var radius = endNode.size * n3.baseNodeSize + 2;
 
       // Determine line lengths
       var xlen = x2 - x1;
@@ -490,7 +352,6 @@
 
       // Determine the ratio between they shortened value and the full hypotenuse.
       var ratio = (hlen - radius) / hlen;
-
       var edgeX = x1 + (xlen * ratio);
       var edgeY = y1 + (ylen * ratio);
       
@@ -511,7 +372,6 @@
     var n3 = this;
     n3.endAnimation();
     n3.currTime = 0;
-    n3.prevTime = 0;
 
     var processData = function(data) {
       console.time('loadData');
@@ -521,22 +381,21 @@
         $(n3.domTarget.select('.data_chooser').node()).val(graphData);
         n3.domTarget.select('.video_link').attr('href', graphData.replace('.json', '.mp4'))
       }
-      n3.container.select('.edges').selectAll('*').remove();
-      n3.container.select('.labels').selectAll('*').remove();
-      n3.container.select('.nodes').selectAll('*').remove();
+      n3.container.selectAll('.edges, .labels, .nodes').selectAll('*').remove();
 
-      n3.initScales();
-      n3.nodes = n3.graph.val;
-      n3.edges = n3.graph.mel;
-      n3.node_coords = {};
+      n3.nodeCoords = {};
 
-      $.each(n3.nodes, function(i, n) {
+      $.each(n3.graph.val, function(i, n) {
         if (! $.isEmptyObject(n)) {
           n.id = i+1;
         }
-        n3.node_coords[n.id] = [0,0];
+        n3.nodeCoords[n.id] = {
+          coord: [0,0],
+          active: false,
+          size: 0
+        }
       })
-      $.each(n3.edges, function(i, e) {
+      $.each(n3.graph.mel, function(i, e) {
         if (! $.isEmptyObject(e)) {
           e.id = i+1;
         }
@@ -549,7 +408,11 @@
       var valIndex = {};
       $.each(n3.timeIndex, function(i, t){
         valIndex[t.start] = i;
+        t.renderData = n3.generateSliceRenderData(i);
+        delete t.data; //remove redundant data that we've stored in renderData
       })      
+
+      n3.initScales();
 
       if(n3.options.slider) {
         var sliderDiv = n3.domTarget.select('.slider');
@@ -565,7 +428,8 @@
         n3.slider.interval(sliceInfo['aggregate.dur'][0])
         n3.slider.on('slide', function(ext, value) {
           //Check to see if event originated from slider control or elsewhere
-          if (event.type == 'drag' || d3.select(event.target).classed({'d3-slider': true})) {
+          var event = d3.event;
+          if (event.type == 'drag' || d3.select(event.target).classed('d3-slider')) {
             n3.endAnimation();
             var duration = n3.options.scrubDuration/Math.abs(n3.currTime-value);
             n3.animateGraph(n3.currTime, valIndex[value], duration, true);
@@ -583,7 +447,7 @@
       }
       console.timeEnd('loadData');
       if (n3.options.animateOnLoad) {
-        n3.animateGraph(n3.currTime+1);
+        n3.playAnimation();
       } else {
         n3.drawGraph(n3.options.animationDuration);
       }
@@ -598,14 +462,126 @@
     }
   }
 
+  n3.prototype.generateSliceRenderData = function(time) {
+    var n3 = this;
+
+    var sliceRenderData = {
+      graph: {},
+      node: {},
+      edge: {}
+    };
+
+    var data = n3.timeIndex[time].data;
+
+    $.each(['graph', 'node', 'edge'], function(i, type) {
+      var sourceList = [];
+      if (type == 'graph') {
+        sourceList = [n3.graph.gal];
+      } else if (type == 'node') {
+        sourceList = n3.graph.val;
+      } else {
+        sourceList = n3.graph.mel;
+      }
+
+      $.each(sourceList, function(i, item) {
+        var id =0;
+        var propertyIndex;
+        var itemProperties = {};
+
+        if (type != 'graph') {
+          id = item.id;
+          propertyIndex = data.active[type+'s'][id];
+        }
+
+        if (type == 'graph' || propertyIndex !== undefined) {
+          itemProperties.id = id;
+          $.each(ndtvProperties[type], function(property, def) {
+            var lookup = propertyIndex;
+            var value = def;
+
+            //If the property list has only one value, we apply it to all items
+            if(data[property] && data[property].length == 1) {
+              lookup = 0;
+            }
+            if (data[property] && data[property][lookup] !== undefined) {
+              value = data[property][lookup];
+              if (value && (property == 'main' || property == 'xlab')) {
+                value = value.split('\n');
+              } else if (! value && property == 'coord') {
+                console.log('missing coordinates for node '+id+ ' at time '+time+' ('+n3.timeIndex[time].start+'-'+n3.timeIndex[time].end+')');
+                //console.log('valid time slices for node '+index+' are '+n3.graph.val[index].active.join(','))
+                //console.log('filling in with last know position: '+value)
+              }
+            } else if (type == 'graph' && data[property]) { //graph properties get applied directly
+              value = data[property];
+            }
+            itemProperties[property] = value;
+          })
+
+          if (type == 'edge') {
+            $.each(['inl', 'outl'], function(i, direction) {
+              itemProperties[direction] = {
+                id: item[direction][0]
+              }
+            });      
+          }
+          if (type == 'graph') {
+            sliceRenderData[type] = itemProperties;
+          } else {
+            sliceRenderData[type][id] = itemProperties;
+          }        
+        } else if (type == 'node') {
+          n3.nodeCoords[id].active = false;
+        }
+      })
+    })
+    return sliceRenderData;
+  }
+
+  n3.prototype.updateSliceRenderData = function(time) {
+    var n3 = this;
+
+    var prevNodeCoords = $.extend({}, n3.nodeCoords);
+    var data = n3.timeIndex[time].renderData;
+    
+    $.each(data.node, function(id, node){
+      if (!node.coord) {
+        node.renderCoord = n3.nodeCoords[id].coord;
+      } else {
+        node.renderCoord = node.coord;
+      }
+      n3.nodeCoords[id] = {
+        coord: node.renderCoord,
+        active: true,
+        size: node['vertex.cex']
+      }
+    });
+    $.each(data.edge, function(id, edge){
+      $.each(['inl', 'outl'], function(i, direction){
+        var nodeid = edge[direction].id;
+        var prevCoords = prevNodeCoords[nodeid];
+        var coords = n3.nodeCoords[nodeid] || prevCoords;
+        edge[direction] = {
+          id: nodeid,
+          coords: coords,
+          //If the node is newly active, use the current coordinates for the start values
+          startCoords: ! prevCoords.active ? coords : prevCoords
+        }
+      })
+    })
+    return data;
+  }
+
   n3.prototype.drawGraph = function(duration) {
     var n3 = this;
 
+    var renderData = n3.updateSliceRenderData(n3.currTime);
+
     var edgeDuration = duration * n3.options.enterExitAnimationFactor;
-    var nodeDuration = duration * 1-n3.options.enterExitAnimationFactor;
+    var nodeDuration = duration * (1-n3.options.enterExitAnimationFactor);
 
     $.each(['main', 'xlab'], function(i, type){
-      var text = n3.timeLookup(type);
+      var text = renderData.graph[type];
       var target = n3.domTarget.select('.'+type+' text');
       target.selectAll('*').remove();
 
@@ -620,11 +596,7 @@
     });
 
     n3.domTarget.select('.background').transition()
-      .duration(!(n3.currTime == 0 && n3.prevTime ==0) * duration) //show immediately if this is the first load
-      .style({fill: n3.timeLookup('bg')});
-
-    //Set arrowheads to be color of first edge
-    n3.domTarget.select('#arrowhead path').attr('fill', n3.timeLookup('edge.col', 1));
+      .style({fill: renderData.graph['bg']});
 
     var showInfo = function(d) {
       if(! n3.selected || n3.selected.id !== d.id) {
@@ -634,18 +606,63 @@
         n3.hideTooltip();
       }
     }
+    
+    //update selected item
+    if (n3.selected) {
+      n3.selected = n3.selected.inl ? renderData.edge[n3.selected.id] : renderData.node[n3.selected.id];
+      if (! n3.selected) {
+        n3.hideTooltip();
+      } 
+    }
 
-    var lines = n3.container.select('.edges').selectAll('.edge').data(n3.dataFilter('edge'), function(e) { return e.id})
+    if (renderData.graph.usearrows) {
+      var markers = n3.domTarget.select('defs').selectAll('.arrowhead').data(d3.values(renderData.edge), function(e) { return e.id})
+        markers.enter().append('marker').attr({
+          id: function(d) { return 'arrowhead_'+d.id; },
+          class: 'arrowhead',
+          viewBox: "0 -5 10 10",
+          refX: 7,
+          refY: 0,
+          markerWidth: 6,
+          markerHeight: 6,
+          markerUnits: "strokeWidth",
+          orient: "auto",
+        })
+        .append("svg:path")
+          .attr({
+            d: "M0,-5L10,0L0,5",
+            fill: 'green'
+          });
+
+        markers.selectAll('path').transition()
+          .delay(edgeDuration)
+          .duration(nodeDuration)
+          .attr({
+            fill: function(d) { return d['edge.col']; }
+          })
+
+        markers.exit().selectAll('path')
+          .attr({
+            fill: 'red'
+          })
+        
+        markers.exit().transition()
+          .delay(edgeDuration)
+          .duration(nodeDuration)
+          .remove()
+    }
+
+    var lines = n3.container.select('.edges').selectAll('.edge').data(d3.values(renderData.edge), function(e) { return e.id})
       lines.enter().append('path')
         .attr({
-          class: function(d) { return 'edge edge_'+d.id+' '+(n3.timeLookup('edge.css.class', d.id) || ''); },     
-          d: function(d) {return n3.getLineCoords(d, n3.prevTime);  },
+          class: function(d) { return 'edge edge_'+d.id+' '+(d['edge.css.class'] || ''); },     
+          d: function(d) {return n3.getLineCoords(d, renderData.graph.usearrows, 1);  },
           opacity: 0,
-          "marker-end": function(d) { if(n3.timeLookup('usearrows')) { return "url(#arrowhead)"; }}
+          "marker-end": function(d) { if(renderData.graph.usearrows) { return "url(#arrowhead_"+d.id+")"; }}
         })
         .style({
           'stroke': 'green',
-          'stroke-width': function(d) { return n3.timeLookup('edge.lwd', d.id); }
+          'stroke-width': function(d) { return d['edge.lwd']; }
         })
         .on('click', showInfo)
         .transition()
@@ -666,19 +683,19 @@
         .delay(edgeDuration)
         .duration(nodeDuration)
         .attr({
-          d: function(d) { return n3.getLineCoords(d, n3.currTime); },
+          d: function(d) {return n3.getLineCoords(d, renderData.graph.usearrows);  },
           opacity: 1
         })
         .style({
-          'stroke': function(d) { return n3.timeLookup('edge.col', d.id)},
-          'stroke-width': function(d) { return n3.timeLookup('edge.lwd', d.id); },
+          'stroke': function(d) { return d['edge.col']},
+          'stroke-width': function(d) { return d['edge.lwd']; },
         })
 
     var styleNodes = function(selection) {
       selection.style({
-        'fill': function(d, i) {return n3.timeLookup('vertex.col', d.id); },
-        'stroke-width': function(d) {return n3.timeLookup('vertex.lwd', d.id); },
-        'stroke': function(d) {return n3.timeLookup('vertex.border', d.id); },
+        'fill': function(d, i) {return d['vertex.col']; },
+        'stroke-width': function(d) {return d['vertex.lwd']; },
+        'stroke': function(d) {return d['vertex.border']; },
       })
       selection.filter('circle').call(n3.drawCircleNode)
       selection.filter('path').call(n3.drawPolygonNode)
@@ -687,7 +704,7 @@
     var createNodes = function(selection) {
       selection
         .attr({
-          class: function(d) { return 'node node_'+d.id+' '+(n3.timeLookup('vertex.css.class', d.id) || ''); },
+          class: function(d) { return 'node node_'+d.id+' '+(d['vertex.css.class'] || ''); },
           opacity: 0,
         })
         .call(styleNodes)
@@ -697,10 +714,10 @@
         .attr('opacity', 1)
     }
 
-    var nodes = n3.container.select('.nodes').selectAll('.node').data(n3.dataFilter('node'), function(e) { return e.id})
+    var nodes = n3.container.select('.nodes').selectAll('.node').data(d3.values(renderData.node), function(e) { return e.id; })
       var node_groups = nodes.enter().append('g');
-      node_groups.filter(function(n) { return  n3.timeLookup('vertex.sides', n.id) != 50;}).append('path').call(createNodes);
-      node_groups.filter(function(n) { return  n3.timeLookup('vertex.sides', n.id) == 50;}).append('circle').call(createNodes);
+      node_groups.filter(function(d) { return d['vertex.sides'] != 50; }).append('path').call(createNodes);
+      node_groups.filter(function(d) { return d['vertex.sides'] == 50; }).append('circle').call(createNodes);
 
       nodes.filter('.node').transition()
         .delay(edgeDuration)
@@ -715,33 +732,33 @@
         .attr('opacity', 0)
         .remove(); 
 
-    var labels = n3.container.select('.labels').selectAll('text').data(n3.dataFilter('node'), function(e) { return e.id});
-      labels.enter().append('text').filter(function(d) { return n3.timeLookup('displaylabels') !== false; })
+    var labels = n3.container.select('.labels').selectAll('text').data(d3.values(renderData.node), function(e) { return e.id});
+      labels.enter().append('text').filter(function(d) { return renderData.displaylabels !== false; })
         .attr({
-          class: function(d) { return 'label label_'+d.id+ ' '+ (n3.timeLookup('vertex.label.css.class', d.id) || ''); },
-          x: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0])+n3.options.labelOffset.x; },
-          y: function(d, i) { return n3.yScale(n3.timeLookup('coord', d.id)[1])+n3.options.labelOffset.y; },
+          class: function(d) { return 'label label_'+d.id+ ' '+ (d['vertex.label.css.class'] || ''); },
+          x: function(d, i) { return n3.xScale(d.renderCoord[0])+n3.options.labelOffset.x; },
+          y: function(d, i) { return n3.yScale(d.renderCoord[1])+n3.options.labelOffset.y; },
           opacity: 0
         })
-        .text(function(d, i) { return n3.timeLookup('label', d.id); })
+        .text(function(d, i) { return d.label; })
         .style({
-          'fill': function(d) {return n3.timeLookup('label.col', d.id); },
+          'fill': function(d) {return d['label.col']; },
         })
         .transition()
         .duration(edgeDuration)
         .attr('opacity', 1)
 
-      labels.transition().filter(function(d) { return n3.timeLookup('displaylabels') !== false; })
+      labels.transition().filter(function(d) { return renderData.graph.displaylabels !== false; })
         .delay(edgeDuration)
         .duration(nodeDuration)
         .attr({
-          x: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0])+n3.options.labelOffset.x; },
-          y: function(d, i) { return n3.yScale(n3.timeLookup('coord', d.id)[1])+n3.options.labelOffset.y; },
+          x: function(d, i) { return n3.xScale(d.renderCoord[0])+n3.options.labelOffset.x; },
+          y: function(d, i) { return n3.yScale(d.renderCoord[1])+n3.options.labelOffset.y; },
           opacity: 1
         })
-        .text(function(d, i) { return n3.timeLookup('label', d.id); })
+        .text(function(d, i) { return d.label; })
         .style({
-          'fill': function(d) {return n3.timeLookup('label.col', d.id); },
+          'fill': function(d) {return d['label.col']; },
         })
 
       labels.exit()
@@ -765,18 +782,19 @@
   n3.prototype.resizeGraph = function() {
     var n3 = this;
     n3.initScales();
+
     var lines = n3.container.select('.edges').selectAll('.edge')
       .attr({
-        d: function(d) { return n3.getLineCoords(d, n3.currTime); },
+        d: function(d) {return n3.getLineCoords(d, n3.timeIndex[n3.currTime].renderData.graph.usearrows);  },
       });
 
     n3.container.selectAll('circle.node').call(n3.drawCircleNode)
-    n3.container.selectAll('path.node').call(n3.drawCircleNode)
+    n3.container.selectAll('path.node').call(n3.drawPolygonNode)
 
     var labels = n3.container.select('.labels').selectAll('text')
       .attr({
-        x: function(d, i) { return n3.xScale(n3.timeLookup('coord', d.id)[0])+n3.options.labelOffset.x; },
-        y: function(d, i) { return n3.yScale(n3.timeLookup('coord', d.id)[1])+n3.options.labelOffset.y; },
+        x: function(d, i) { return n3.xScale(d.renderCoord[0])+n3.options.labelOffset.x; },
+        y: function(d, i) { return n3.yScale(d.renderCoord[1])+n3.options.labelOffset.y; },
       })
 
     n3.moveTooltip();
@@ -804,7 +822,6 @@
       nextTime = time -1;
     }
 
-    n3.prevTime = n3.currTime;
     n3.currTime = time == n3.currTime ? nextTime : time;
     //console.log(n3.currTime + ' '+time+' '+endTime+ ' '+nextTime+ ' '+n3.prevTime)
     if(! noUpdate && n3.options.slider) {
@@ -816,12 +833,6 @@
         n3.animateGraph(nextTime, endTime, duration, noUpdate);
       }, duration)
     }
-  }
-
-  n3.prototype.endAnimation = function(){
-    var n3 = this;
-    clearTimeout(n3.animate);
-    n3.domTarget.selectAll('.node, .edge, .label, .d3-slider-handle').transition().duration(0)
   }
 
   n3.prototype.moveTooltip = function() {
@@ -842,7 +853,7 @@
           left -= coords.width/2;
           property = 'edge.tooltip';
         }
-        var html = n3.timeLookup(property, n3.selected.id) || type+" id: "+n3.selected.id;
+        var html = n3.selected[property] || type+" id: "+n3.selected.id;
         n3.tooltip.style({
           display: 'block',
           top: top+'px', //FIXME - need to offset by rendered height
@@ -858,5 +869,34 @@
     n3.tooltip.style('display', 'none');
   }
 
+  n3.prototype.endAnimation = function(noHalt){
+    var n3 = this;
+    clearTimeout(n3.animate);
+    if (! noHalt) {
+      n3.domTarget.selectAll('.node, .edge, .label, .d3-slider-handle').transition().duration(0)
+    }
+  }
+
+  n3.prototype.stepAnimation = function(reverse) {
+    var n3 = this;
+
+    n3.endAnimation(1);
+    if (reverse) {
+      n3.animateGraph(n3.currTime-1, n3.currTime-1); 
+    } else {
+      n3.animateGraph(n3.currTime+1, n3.currTime+1); 
+    }
+  }
+
+  n3.prototype.playAnimation = function(reverse) {
+    var n3 = this;
+
+    n3.endAnimation(1);
+    if (reverse) { 
+      n3.animateGraph(n3.currTime-1, 0); 
+    } else {
+      n3.animateGraph(n3.currTime+1); 
+    }
+  }
   return n3;
 }));
