@@ -7,13 +7,11 @@
 
   /**
   * Initialize a new ndtv-d3 instance
-  * @alias ndtv_d3
-  * @constructor
+  * @constructs ndtv_d3
   * @param {object} - An object of default options overrides
   * @param {string|HTMLElement} - A CSS selector string or DOM element reference specifying the target dom element the network should be initialized to
   */
   var n3 = function(options, target) {
-    /**@@this n3*/
     var n3 = this;
     
     var globals = {
@@ -108,7 +106,12 @@
     if(n3.options.graphData) { n3.loadData(n3.options.graphData); }
   }
 
-  /** Public options to control visualization functionality **/
+  /**
+  * Public options to control visualization functionality
+  * @constant {object}
+  * @global
+  * @default
+  */
   var default_options = {
     animationDuration: 800,       //Duration of each step animation during play or step actions, in milliseconds
     scrubDuration: 0,             //Sum duration of all step animations when scrubbing, regardless of # of steps
@@ -130,7 +133,12 @@
     graphData: null,              //graph data, either as JSON object or URL to json file
   };
 
-  /** Supported NDTV network properties and their default values */
+  /**
+  * Supported NDTV network properties and their default values
+  * @constant {object}
+  * @global
+  * @default
+  */
   var ndtvProperties = {
     graph: {
       xlab: null,                     // label caption below the render, on the xaxis
@@ -166,12 +174,11 @@
       'edge.label.css.style': null,   // css inline style applied to edge label (UNIMPLEMENTED)
     }
   }
-
+  
   /**
   * Initialize the SVG element and related DOM elements and listeners
   */
   n3.prototype.SVGSetup = function() {
-    /** @this n3 */
     var n3 = this;
 
     $(n3.domTarget).resize(function(n) { 
