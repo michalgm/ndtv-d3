@@ -1,95 +1,56 @@
 (function (root, factory) {
   root.ndtv_d3 = factory();
 }(this, function() {
-  //return function module() {
   "use strict";
-  
-  var default_options = {
-    animationDuration: 800,       //Duration of each step animation during play or step actions, in milliseconds
-    scrubDuration: 0,             //Sum duration of all step animations when scrubbing, regardless of # of steps
-    enterExitAnimationFactor: 0,  //Percentage (0-1) of total step animation time that enter/exit animations should take
-    labelOffset: {                //pixel offset of labels
-      x: 12,
-      y: 0
-    },
-    nodeSizeFactor: 0.01,         //Percentage (0-1) of viewport size that a node of size 1 will be rendered at
-    dataChooser: false,           //show a select box for choosing different graphs?
-    dataChooserDir: 'data/',      //web path to dir containing data json files
-    playControls: true,           //show the player controls
-    slider: true,                 //show the slider control
-    animateOnLoad: false,         //play the graph animation on page load
-    margin: {                     //graph render area margins
-      x: 20,
-      y: 10
-    },
-    graphData: null,              //graph data, either as JSON object or URL to json file
-  };
 
-  var properties = {
-    svg: null,
-    xScale: null,
-    yScale: null,
-    minTime: null,
-    interval: null,
-    maxTime: null,
-    animate: null,
-    baseNodeSize: null,
-    currTime: 0,
-    graph: null,
-    timeIndex:null,
-    domTarget:null,
-    slider:null,
-    nodeCoords: {},
-    options: {}
-  }
-
-  var ndtvProperties = {
-    graph: {
-      xlab: null,                     // label caption below the render, on the xaxis
-      main: null,                     // main headline above the render
-      displaylabels: false ,          // should vertex labels be displayed
-      bg: '#fff',                     // background color
-      usearrows: true,                // should arrows be drawn on edges?
-      xlim: null,                     // range of x values                     
-      ylim: null,                     // range of y values  
-    }, 
-    node: {
-      coord: null,                    // coordinates for nodes
-      'vertex.cex': 1,                // vertex (node) expansion scale factor
-      label: null,                    // labels for vertices
-      'label.col': '#000',            // color of node label
-      'vertex.col': '#F00',           // node fill color
-      'vertex.sides': 50,             // number of sides for vertex polygon (shape)
-      'vertex.rot': 0,                // rotation for vertex polygon
-      'vertex.tooltip': '',           // vertex tooltip value
-      'vertex.border': '#000',        // color of vertex border stroke
-      'vertex.css.class': null,       // css class name applied to node
-      'vertex.label.css.class': null, // css class name applied to node label
-      'vertex.css.style': null,       // css inline-style applied to node (UNIMPLIMENTED)
-      'vertex.label.css.style': null, // css inline style applied to node label (UNIMPLEMENTED)
-    },
-    edge: {
-      'edge.lwd': 1,                  // width of vertex border stroke
-      'edge.col': '#000',             // edge stroke color
-      'edge.tooltip': null,           // edge tooltip value
-      'edge.css.class': null,         // css class name applied to edge
-      'edge.label.css.class': null,   // css class name applied to edge label
-      'edge.css.style': null,         // css inline-style applied to edge (UNIMPLIMENTED)
-      'edge.label.css.style': null,   // css inline style applied to edge label (UNIMPLEMENTED)
-    }
-  }
-  //constructor
-  var n3 = function(opts, target) {
+/**
+* Initialize a new ndtv-d3 instance
+* @constructor
+* @alias ndtv_d3
+* @param {object} options - An object of default options overrides
+* @param {string|HTMLElement} target - A CSS selector string or DOM element reference specifying the target dom element the network should be initialized to
+*/
+  var n3 = function(options, target) {
     var n3 = this;
     
-    //initialize class with default properties
-    $.extend(true, n3, properties);
+    var globals = {
+      svg: null,
+      xScale: null,
+      yScale: null,
+      minTime: null,
+      interval: null,
+      maxTime: null,
+      animate: null,
+      baseNodeSize: null,
+      currTime: 0,
+      graph: null,
+      timeIndex:null,
+      domTarget:null,
+      slider:null,
+      nodeCoords: {},
+      options: {}
+    }
+
+    //initialize class globals
+    $.extend(true, n3, globals);
 
     //replace defaults with user-specified options
     $.extend(true, n3.options, default_options);
-    $.extend(true, n3.options, opts);
+    $.extend(true, n3.options, options);
 
-    n3.drawCircleNode = function(selection){
+    /* initializes a D3 line drawing function
+    * @private */
+    var drawLine = function() {
+      return d3.svg.line()
+        .x(function(d){return d[0];})
+        .y(function(d){return d[1];})
+    }
+
+    /* creates circle attributes for given node selection
+    * @param {D3 selection}
+    * @private
+    */
+    this.drawCircleNode = function(selection){
       selection.attr({
         cx: function(d, i) { return n3.xScale(d.renderCoord[0]); },
         cy: function(d, i) { return n3.yScale(d.renderCoord[1]); },
@@ -97,13 +58,11 @@
       })
     }
 
-    var drawLine = function() {
-      return d3.svg.line()
-        .x(function(d){return d[0];})
-        .y(function(d){return d[1];})
-    }
-
-    n3.drawPolygonNode = function(selection){
+    /* creates a polygon-shaped path attribute for given node selection
+    * @param {D3 selection}
+    * @private
+    */
+    this.drawPolygonNode = function(selection){
       selection.attr({
         d: function(d, i) { 
           var sides = d['vertex.sides'];
@@ -146,6 +105,69 @@
     if(n3.options.graphData) { n3.loadData(n3.options.graphData); }
   }
 
+  /** Public options to control visualization functionality **/
+  var default_options = {
+    animationDuration: 800,       //Duration of each step animation during play or step actions, in milliseconds
+    scrubDuration: 0,             //Sum duration of all step animations when scrubbing, regardless of # of steps
+    enterExitAnimationFactor: 0,  //Percentage (0-1) of total step animation time that enter/exit animations should take
+    labelOffset: {                //pixel offset of labels
+      x: 12,
+      y: 0
+    },
+    nodeSizeFactor: 0.01,         //Percentage (0-1) of viewport size that a node of size 1 will be rendered at
+    dataChooser: false,           //show a select box for choosing different graphs?
+    dataChooserDir: 'data/',      //web path to dir containing data json files
+    playControls: true,           //show the player controls
+    slider: true,                 //show the slider control
+    animateOnLoad: false,         //play the graph animation on page load
+    margin: {                     //graph render area margins
+      x: 20,
+      y: 10
+    },
+    graphData: null,              //graph data, either as JSON object or URL to json file
+  };
+
+  /** Supported NDTV network properties and their default values */
+  var ndtvProperties = {
+    graph: {
+      xlab: null,                     // label caption below the render, on the xaxis
+      main: null,                     // main headline above the render
+      displaylabels: false ,          // should vertex labels be displayed
+      bg: '#fff',                     // background color
+      usearrows: true,                // should arrows be drawn on edges?
+      xlim: null,                     // range of x values                     
+      ylim: null,                     // range of y values  
+    }, 
+    node: {
+      coord: null,                    // coordinates for nodes
+      'vertex.cex': 1,                // vertex (node) expansion scale factor
+      label: null,                    // labels for vertices
+      'label.col': '#000',            // color of node label
+      'vertex.col': '#F00',           // node fill color
+      'vertex.sides': 50,             // number of sides for vertex polygon (shape)
+      'vertex.rot': 0,                // rotation for vertex polygon
+      'vertex.tooltip': '',           // vertex tooltip value
+      'vertex.border': '#000',        // color of vertex border stroke
+      'vertex.css.class': null,       // css class name applied to node
+      'vertex.label.css.class': null, // css class name applied to node label
+      'vertex.css.style': null,       // css inline-style applied to node (UNIMPLIMENTED)
+      'vertex.label.css.style': null, // css inline style applied to node label (UNIMPLEMENTED)
+    },
+    edge: {
+      'edge.lwd': 1,                  // width of vertex border stroke
+      'edge.col': '#000',             // edge stroke color
+      'edge.tooltip': null,           // edge tooltip value
+      'edge.css.class': null,         // css class name applied to edge
+      'edge.label.css.class': null,   // css class name applied to edge label
+      'edge.css.style': null,         // css inline-style applied to edge (UNIMPLIMENTED)
+      'edge.label.css.style': null,   // css inline style applied to edge label (UNIMPLEMENTED)
+    }
+  }
+
+  /**
+  * Initialize the SVG element and related DOM elements and listeners
+  * @method SVGSetup
+  */
   n3.prototype.SVGSetup = function() {
     var n3 = this;
 
@@ -195,6 +217,7 @@
     svg.call(n3.zoom)
   }
 
+  /** sets positioning on svg elements based on current DOM container size and sets data scaling factors accordingly FIXME - rename?*/
   n3.prototype.initScales = function() {
     var n3 = this;
     var div_width = n3.domTarget.node().offsetWidth
@@ -238,7 +261,6 @@
 
     n3.container.attr("transform", "translate(" + margin.x + "," + (margin.y+mainMargin) + ")");
 
-
     var center = margin.x + width/2;
     n3.domTarget.select('.xlab').attr('transform', "translate("+center+","+(div_height-margin.y)+")")
     n3.domTarget.select('.main').attr('transform', "translate("+center+","+(margin.y+mainSize)+")")
@@ -260,7 +282,7 @@
 
   }
   
-  //creates the (optional) dataChooser element to be used for slecting among multiple JSON files for debugging
+  /** creates the optional dataChooser element to be used for slecting among multiple JSON files for debugging */
   n3.prototype.createDataChooser = function() {
     var n3 = this;
 
@@ -290,7 +312,7 @@
     })
   }
   
-  // creates the play controls using svg icons and defines the attached events
+  /** creates the optional play controls div using svg icons and defines the attached events */
   n3.prototype.createPlayControls = function() {
     var n3 = this;
     
@@ -321,13 +343,17 @@
     div.select('.step-forward-control').on('click', function() { n3.stepAnimation(); });
   }
   
-  // creates the time slider controls and defines attached events
+  /** creates the time slider controls and defines attached events */
   n3.prototype.createSliderControl = function() {
     var n3 = this;
     n3.domTarget.select('.controls').append('div').attr('class', 'slider-control-container').append('div').attr('class', 'slider');
   }
 
-  // look up the coordinates for an edge given the time
+  /** look up the coordinates for an edge given the time
+  * @param {object} - the D3 data object
+  * @param {boolean} - If true, positions end of line offset of node radius to accomodate arrowhead 
+  * @param {boolean} - If true, draws path using current node positions (before animation begins)
+  */
   n3.prototype.getLineCoords = function(d, usearrows, start) {
     var n3 = this;
 
@@ -367,7 +393,9 @@
     return 'M '+x1+' '+y1+' L '+edgeX+' '+edgeY;
   }
  
-  // load and process the JSON formatted data
+  /** load and process the JSON formatted data
+  * @param {url|JSON} - either a NDTV-generated JSON object, or a URL path to file containing JSON data
+  */
   n3.prototype.loadData = function(graphData) {
     var n3 = this;
     n3.endAnimation();
@@ -462,6 +490,10 @@
     }
   }
 
+  /** For a given time slice, process timeIndex data and generate render data, filling in defaults as necessary
+  * @param {integer} - the time index to process
+  * @private
+  */
   n3.prototype.generateSliceRenderData = function(time) {
     var n3 = this;
 
@@ -538,6 +570,10 @@
     return sliceRenderData;
   }
 
+  /** updates renderdata node coordinates based on current state of graph, and updates node state tracker
+  * @param {integer} - the time index to process
+  * @private
+  */
   n3.prototype.updateSliceRenderData = function(time) {
     var n3 = this;
 
@@ -572,6 +608,9 @@
     return data;
   }
 
+  /** render the graph to reflect the state at currTime, transitioning elements over a given duration
+  * @param {milliseconds} - the amount of time the transition animation should take
+  */
   n3.prototype.drawGraph = function(duration) {
     var n3 = this;
 
@@ -779,6 +818,7 @@
       translateTooltip();
   }
 
+  /** resizes graph and other display elements to fill the target viewport */
   n3.prototype.resizeGraph = function() {
     var n3 = this;
     n3.initScales();
@@ -806,7 +846,12 @@
     } 
   }
   
-  // function to 'play' animation or jump to a specific point in time
+  /** graph animation controller
+  * @param {integer} - render the graph to the state at this timeslice index
+  * @param {integer} - function will recursively call itself until time equals this value
+  * @param {milliseconds} - the amount of time the transition animation should take
+  * @param {boolean} - don't update time slider - FIXME - do we really need this?
+  */
   n3.prototype.animateGraph = function(time, endTime, duration, noUpdate) {
     var n3 = this;
     if (time > n3.timeIndex.length -1 || time < 0) { return; }
@@ -835,6 +880,7 @@
     }
   }
 
+  /** redraw the info popover //FIXME - needs renamed */
   n3.prototype.moveTooltip = function() {
     var n3 = this;
     if (n3.selected) {
@@ -863,12 +909,16 @@
     }
   }
 
+  /** hide the tooltip and unset the selected global */
   n3.prototype.hideTooltip = function() {
     var n3 = this;
     n3.selected = null;
     n3.tooltip.style('display', 'none');
   }
 
+  /** stop the current animation cycle
+  * @param {boolean} - if true, immediate halt all active transitions (otherwise, let animation continue to next time slice)
+  */
   n3.prototype.endAnimation = function(noHalt){
     var n3 = this;
     clearTimeout(n3.animate);
@@ -877,6 +927,9 @@
     }
   }
 
+  /** step the animation by one time slice
+  * @param {boolean} - if true, go to previous time slice, else go forward
+  */
   n3.prototype.stepAnimation = function(reverse) {
     var n3 = this;
 
@@ -887,7 +940,9 @@
       n3.animateGraph(n3.currTime+1, n3.currTime+1); 
     }
   }
-
+  /** animate the graph over all time slices, starting at current slice
+  * @param {boolean} - if true, animate slices backwards until beginning of time index, other play until end
+  */
   n3.prototype.playAnimation = function(reverse) {
     var n3 = this;
 
