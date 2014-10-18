@@ -68,7 +68,6 @@
     n3.drawPolygonNode = function(selection){
       selection.attr({
         d: function(d, i) { 
-          //return n3.drawPolygon(d) 
           var sides = n3.timeLookup('vertex.sides', d.id);
           var size = n3.timeLookup('vertex.cex', d.id) * n3.baseNodeSize;
           var coords = n3.timeLookup('coord', d.id);
@@ -133,17 +132,7 @@
     n3.domTarget
       .append('div').attr('class', 'graph')
       .append("svg:svg")
-      .append("defs").append("marker")
-        .attr("id", 'arrowhead')
-        .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 7)
-        .attr("refY", 0)
-        .attr("markerWidth", 6)
-        .attr("markerHeight", 6)
-        .attr("markerUnits", "strokeWidth")
-        .attr("orient", "auto")
-      .append("svg:path")
-        .attr("d", "M0,-5L10,0L0,5");
+      .append("defs")
 
     var svg = n3.domTarget.select('svg')
       .append('g')
@@ -310,12 +299,14 @@
       return n3.timeIndex[n3.currTime].data.active[type+'s'][item.id];
     });
   }
+  
+  // var colors = d3.scale.category20();
 
   // listing of all the known properties and which type of element (node, edge, graph) they belong to
   n3.prototype.timeLookup = function(property, index, time) {
     var n3 = this;
     time = time === undefined ? n3.currTime : time;
-    
+    // var c = colors(Math.floor(index*time/20));
     var data = n3.timeIndex[time].data;
     var properties = {
       'xlab': {           // label caption below the render, on the xaxis
@@ -565,7 +556,8 @@
         n3.slider.interval(sliceInfo['aggregate.dur'][0])
         n3.slider.on('slide', function(ext, value) {
           //Check to see if event originated from slider control or elsewhere
-          if (event.type == 'drag' || d3.select(event.target).classed({'d3-slider': true})) {
+          var event = d3.event;
+          if (event.type == 'drag' || d3.select(event.target).classed('d3-slider')) {
             n3.endAnimation();
             var duration = n3.options.scrubDuration/Math.abs(n3.currTime-value);
             n3.animateGraph(n3.currTime, valIndex[value], duration, true);
@@ -635,13 +627,50 @@
       }
     }
 
+    if (n3.timeLookup('usearrows')) {
+      var markers = n3.domTarget.select('defs').selectAll('.arrowhead').data(n3.dataFilter('edge'), function(e) { return e.id})
+        markers.enter().append('marker').attr({
+          id: function(d) { return 'arrowhead_'+d.id; },
+          class: 'arrowhead',
+          viewBox: "0 -5 10 10",
+          refX: 7,
+          refY: 0,
+          markerWidth: 6,
+          markerHeight: 6,
+          markerUnits: "strokeWidth",
+          orient: "auto",
+        })
+        .append("svg:path")
+          .attr({
+            d: "M0,-5L10,0L0,5",
+            fill: 'green'
+          });
+
+        markers.selectAll('path').transition()
+          .delay(edgeDuration)
+          .duration(nodeDuration)
+          .attr({
+            fill: function(d) { return n3.timeLookup('edge.col', d.id); }
+          })
+
+        markers.exit().selectAll('path')
+          .attr({
+            fill: 'red'
+          })
+        
+        markers.exit().transition()
+          .delay(edgeDuration)
+          .duration(nodeDuration)
+          .remove()
+    }
+
     var lines = n3.container.select('.edges').selectAll('.edge').data(n3.dataFilter('edge'), function(e) { return e.id})
       lines.enter().append('path')
         .attr({
           class: function(d) { return 'edge edge_'+d.id+' '+(n3.timeLookup('edge.css.class', d.id) || ''); },     
           d: function(d) {return n3.getLineCoords(d, n3.prevTime);  },
           opacity: 0,
-          "marker-end": function(d) { if(n3.timeLookup('usearrows')) { return "url(#arrowhead)"; }}
+          "marker-end": function(d) { if(n3.timeLookup('usearrows')) { return "url(#arrowhead_"+d.id+")"; }}
         })
         .style({
           'stroke': 'green',
@@ -771,7 +800,7 @@
       });
 
     n3.container.selectAll('circle.node').call(n3.drawCircleNode)
-    n3.container.selectAll('path.node').call(n3.drawCircleNode)
+    n3.container.selectAll('path.node').call(n3.drawPolygonNode)
 
     var labels = n3.container.select('.labels').selectAll('text')
       .attr({
