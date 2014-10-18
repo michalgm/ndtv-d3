@@ -488,29 +488,36 @@
       }
 
       $.each(sourceList, function(i, item) {
-        var id =0,
-            lookup = 0,
-            itemProperties = {};
+        var id =0;
+        var propertyIndex;
+        var itemProperties = {};
 
         if (type != 'graph') {
           id = item.id;
-          lookup = data.active[type+'s'][id];
+          propertyIndex = data.active[type+'s'][id];
         }
 
-        if (lookup !== undefined) {
+        if (type == 'graph' || propertyIndex !== undefined) {
           itemProperties.id = id;
           $.each(ndtvProperties[type], function(property, def) {
+            var lookup = propertyIndex;
             var value = def;
+
+            //If the property list has only one value, we apply it to all items
+            if(data[property] && data[property].length == 1) {
+              lookup = 0;
+            }
             if (data[property] && data[property][lookup] !== undefined) {
               value = data[property][lookup];
               if (value && (property == 'main' || property == 'xlab')) {
                 value = value.split('\n');
               } else if (! value && property == 'coord') {
-                //value = n3.nodeCoords[id].coord;
-                console.log('missing coordinates for node '+index+ ' at time '+time+' ('+n3.timeIndex[time].start+'-'+n3.timeIndex[time].end+')');
+                console.log('missing coordinates for node '+id+ ' at time '+time+' ('+n3.timeIndex[time].start+'-'+n3.timeIndex[time].end+')');
                 //console.log('valid time slices for node '+index+' are '+n3.graph.val[index].active.join(','))
                 //console.log('filling in with last know position: '+value)
               }
+            } else if (type == 'graph' && data[property]) {
+              value = data[property];
             }
             itemProperties[property] = value;
           })
