@@ -26,8 +26,6 @@
   };
 
   var properties = {
-    nodes: null,
-    edges: null,
     svg: null,
     xScale: null,
     yScale: null,
@@ -37,7 +35,6 @@
     animate: null,
     baseNodeSize: null,
     currTime: 0,
-    prevTime:0,
     graph: null,
     timeIndex:null,
     domTarget:null,
@@ -203,8 +200,8 @@
     var div_width = n3.domTarget.node().offsetWidth
     var div_height = n3.domTarget.node().offsetHeight - $(n3.domTarget.select('.controls').node()).outerHeight(true);
 
-    var xlab = n3.renderData[n3.currTime].graph.xlab;
-    var main = n3.renderData[n3.currTime].graph.main;
+    var xlab = n3.timeIndex[n3.currTime].renderData.graph.xlab;
+    var main = n3.timeIndex[n3.currTime].renderData.graph.main;
     var xlabSize = parseFloat(window.getComputedStyle(n3.domTarget.select('.xlab').node(), null).getPropertyValue('font-size'));
     var mainSize = parseFloat(window.getComputedStyle(n3.domTarget.select('.main').node(), null).getPropertyValue('font-size'));
     var mainMargin = 0;
@@ -251,11 +248,11 @@
 
     //set the X and Y scales
     n3.xScale = d3.scale.linear()
-      .domain([n3.timeIndex[0].data.xlim[0],n3.timeIndex[0].data.xlim[1]])
+      .domain([n3.timeIndex[0].renderData.graph.xlim[0],n3.timeIndex[0].renderData.graph.xlim[1]])
       .range([0, pixelSpace]);
 
     n3.yScale = d3.scale.linear()
-      .domain([n3.timeIndex[0].data.ylim[0],n3.timeIndex[0].data.ylim[1]])
+      .domain([n3.timeIndex[0].renderData.graph.ylim[0],n3.timeIndex[0].renderData.graph.ylim[1]])
       .range([pixelSpace, 0]);
 
     //reset zoom translate based on margins
@@ -375,7 +372,6 @@
     var n3 = this;
     n3.endAnimation();
     n3.currTime = 0;
-    n3.prevTime = 0;
 
     var processData = function(data) {
       console.time('loadData');
@@ -409,11 +405,11 @@
       n3.minTime = sliceInfo.start[0];
       n3.maxTime = sliceInfo.end[0];
       n3.interval = sliceInfo.interval[0];
-      n3.renderData = [];
       var valIndex = {};
       $.each(n3.timeIndex, function(i, t){
         valIndex[t.start] = i;
-        n3.renderData[i] = n3.generateSliceRenderData(i);
+        t.renderData = n3.generateSliceRenderData(i);
+        delete t.data; //remove redundant data that we've stored in renderData
       })      
 
       n3.initScales();
@@ -451,7 +447,7 @@
       }
       console.timeEnd('loadData');
       if (n3.options.animateOnLoad) {
-        n3.animateGraph(n3.currTime+1);
+        n3.playAnimation();
       } else {
         n3.drawGraph(n3.options.animationDuration);
       }
@@ -516,7 +512,7 @@
                 //console.log('valid time slices for node '+index+' are '+n3.graph.val[index].active.join(','))
                 //console.log('filling in with last know position: '+value)
               }
-            } else if (type == 'graph' && data[property]) {
+            } else if (type == 'graph' && data[property]) { //graph properties get applied directly
               value = data[property];
             }
             itemProperties[property] = value;
@@ -546,7 +542,7 @@
     var n3 = this;
 
     var prevNodeCoords = $.extend({}, n3.nodeCoords);
-    var data = n3.renderData[time];
+    var data = n3.timeIndex[time].renderData;
     
     $.each(data.node, function(id, node){
       if (!node.coord) {
@@ -600,7 +596,6 @@
     });
 
     n3.domTarget.select('.background').transition()
-      .duration(!(n3.currTime == 0 && n3.prevTime ==0) * duration) //show immediately if this is the first load
       .style({fill: renderData.graph['bg']});
 
     var showInfo = function(d) {
@@ -790,7 +785,7 @@
 
     var lines = n3.container.select('.edges').selectAll('.edge')
       .attr({
-        d: function(d) { return n3.getLineCoords(d, n3.currTime); },
+        d: function(d) {return n3.getLineCoords(d, n3.timeIndex[n3.currTime].renderData.graph.usearrows);  },
       });
 
     n3.container.selectAll('circle.node').call(n3.drawCircleNode)
@@ -827,7 +822,6 @@
       nextTime = time -1;
     }
 
-    n3.prevTime = n3.currTime;
     n3.currTime = time == n3.currTime ? nextTime : time;
     //console.log(n3.currTime + ' '+time+' '+endTime+ ' '+nextTime+ ' '+n3.prevTime)
     if(! noUpdate && n3.options.slider) {
