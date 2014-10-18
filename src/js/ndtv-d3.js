@@ -277,11 +277,11 @@
       "<div><svg class='icon step-forward-control' viewBox='0 0 32 32'><g transform='rotate(180, 16, 16)'><use xlink:href='#icon-first'></use></g></svg></div>"
     );
 
-    div.select('.step-back-control').on('click', function() { n3.animateGraph(n3.currTime-1, n3.currTime-1); });
-    div.select('.play-back-control').on('click', function() { n3.animateGraph(n3.currTime-1, 0); });
+    div.select('.step-back-control').on('click', function() { n3.stepAnimation(1); });
+    div.select('.play-back-control').on('click', function() { n3.playAnimation(1); });
     div.select('.pause-control').on('click', function() { n3.endAnimation(); });
-    div.select('.play-forward-control').on('click', function() { n3.animateGraph(n3.currTime+1); });
-    div.select('.step-forward-control').on('click', function() { n3.animateGraph(n3.currTime+1, n3.currTime+1); });
+    div.select('.play-forward-control').on('click', function() { n3.playAnimation(); });
+    div.select('.step-forward-control').on('click', function() { n3.stepAnimation(); });
   }
   
   // creates the time slider controls and defines attached events
@@ -847,12 +847,6 @@
     }
   }
 
-  n3.prototype.endAnimation = function(){
-    var n3 = this;
-    clearTimeout(n3.animate);
-    n3.domTarget.selectAll('.node, .edge, .label, .d3-slider-handle').transition().duration(0)
-  }
-
   n3.prototype.moveTooltip = function() {
     var n3 = this;
     if (n3.selected) {
@@ -887,5 +881,34 @@
     n3.tooltip.style('display', 'none');
   }
 
+  n3.prototype.endAnimation = function(noHalt){
+    var n3 = this;
+    clearTimeout(n3.animate);
+    if (! noHalt) {
+      n3.domTarget.selectAll('.node, .edge, .label, .d3-slider-handle').transition().duration(0)
+    }
+  }
+
+  n3.prototype.stepAnimation = function(reverse) {
+    var n3 = this;
+
+    n3.endAnimation(1);
+    if (reverse) {
+      n3.animateGraph(n3.currTime-1, n3.currTime-1); 
+    } else {
+      n3.animateGraph(n3.currTime+1, n3.currTime+1); 
+    }
+  }
+
+  n3.prototype.playAnimation = function(reverse) {
+    var n3 = this;
+
+    n3.endAnimation(1);
+    if (reverse) { 
+      n3.animateGraph(n3.currTime-1, 0); 
+    } else {
+      n3.animateGraph(n3.currTime+1); 
+    }
+  }
   return n3;
 }));
