@@ -94,7 +94,7 @@
     }
     n3.domTarget = d3.select(target);
     n3.domTarget.classed({'ndtv-d3-container': true});
-    n3.SVGSetup();
+    n3.SVGSetup(n3.domTarget);
     if (n3.options.playControls || n3.options.slider) {
       n3.domTarget.append('div').attr('class', 'controls');
     }
@@ -102,7 +102,7 @@
     if (n3.options.playControls) { n3.createPlayControls(); }
     if (n3.options.slider) { n3.createSliderControl(); }
 
-    n3.tooltip = n3.domTarget.append('div').attr('class', 'tooltip')
+    n3.tooltip = n3.domTarget.select('.graph').append('div').attr('class', 'tooltip')
     if(n3.options.graphData) { n3.loadData(n3.options.graphData); }
   }
 
@@ -177,30 +177,39 @@
   
   /**
   * Initialize the SVG element and related DOM elements and listeners
+  * @param {D3Selection} - DOM element to insert svg into
   */
-  n3.prototype.SVGSetup = function() {
+  n3.prototype.SVGSetup = function(domTarget) {
     var n3 = this;
 
-    $(n3.domTarget).resize(function(n) { 
+    $(domTarget).resize(function(n) { 
       n3.resizeGraph(n);
     });
     $(window).resize(function(n) { 
       n3.resizeGraph(n);
     });
  
-    n3.domTarget
+    domTarget
       .append('div').attr('class', 'graph')
       .append("svg:svg")
       .append("defs")
 
-    var svg = n3.domTarget.select('svg')
+    var svg = domTarget.select('svg')
       .append('g')
 
+    var downLocation;
     var rect = svg.append("rect")
       .attr('class', 'background')
       .style("fill", "none")
       .style("pointer-events", "all")
-      .on('click', function() { n3.hideTooltip();})
+      .on('mousedown', function() { 
+        downLocation = n3.container.attr('transform');
+      })
+      .on('mouseup', function() { 
+        if (downLocation == n3.container.attr('transform')) {
+          n3.hideTooltip();
+        }
+      })
 
     n3.container = svg.append("g")
       .attr('class', 'container')
@@ -290,6 +299,9 @@
     //reset zoom translate based on margins
     n3.zoom.translate([margin.x, margin.y+mainMargin])
 
+    //Cache height and offset to use for tooltip movement
+    n3.height = n3.domTarget.select('.graph').node().offsetHeight
+    n3.offset = $(n3.domTarget.select('.graph').node()).offset();
   }
   
   /** creates the optional dataChooser element to be used for slecting among multiple JSON files for debugging */
@@ -626,8 +638,8 @@
 
     var renderData = n3.updateSliceRenderData(n3.currTime);
 
-    var edgeDuration = duration * n3.options.enterExitAnimationFactor;
-    var nodeDuration = duration * (1-n3.options.enterExitAnimationFactor);
+    var enterExitDuration = duration * n3.options.enterExitAnimationFactor;
+    var updateDuration = duration * (1-n3.options.enterExitAnimationFactor);
 
     $.each(['main', 'xlab'], function(i, type){
       var text = renderData.graph[type];
@@ -684,8 +696,8 @@
           });
 
         markers.selectAll('path').transition()
-          .delay(edgeDuration)
-          .duration(nodeDuration)
+          .delay(enterExitDuration)
+          .duration(updateDuration)
           .attr({
             fill: function(d) { return d['edge.col']; }
           })
@@ -696,8 +708,8 @@
           })
         
         markers.exit().transition()
-          .delay(edgeDuration)
-          .duration(nodeDuration)
+          .delay(enterExitDuration)
+          .duration(updateDuration)
           .remove()
     }
 
@@ -715,22 +727,22 @@
         })
         .on('click', showInfo)
         .transition()
-        .duration(edgeDuration)
+        .duration(enterExitDuration)
         .attr({opacity: 1})
        
       // lines.transition()
-      //   .delay(edgeDuration-6)
+      //   .delay(enterExitDuration-6)
       //   .duration(0)
       lines.exit()
         .style('stroke', 'red')
         .transition()
-        .duration(edgeDuration)
+        .duration(enterExitDuration)
         .attr('opacity', 0)          
         .remove();
 
       lines.transition()
-        .delay(edgeDuration)
-        .duration(nodeDuration)
+        .delay(enterExitDuration)
+        .duration(updateDuration)
         .attr({
           d: function(d) {return n3.getLineCoords(d, renderData.graph.usearrows);  },
           opacity: 1
@@ -759,7 +771,7 @@
         .call(styleNodes)
         .on('click', showInfo)
         .transition()
-        .duration(edgeDuration)
+        .duration(enterExitDuration)
         .attr('opacity', 1)
     }
 
@@ -769,15 +781,15 @@
       node_groups.filter(function(d) { return d['vertex.sides'] == 50; }).append('circle').call(createNodes);
 
       nodes.filter('.node').transition()
-        .delay(edgeDuration)
-        .duration(nodeDuration)
+        .delay(enterExitDuration)
+        .duration(updateDuration)
         .attr({
           opacity: 1
         }).call(styleNodes)
 
       nodes.exit()
         .transition()
-        .duration(edgeDuration)
+        .duration(enterExitDuration)
         .attr('opacity', 0)
         .remove(); 
 
@@ -794,12 +806,12 @@
           'fill': function(d) {return d['label.col']; },
         })
         .transition()
-        .duration(edgeDuration)
+        .duration(enterExitDuration)
         .attr('opacity', 1)
 
       labels.transition().filter(function(d) { return renderData.graph.displaylabels !== false; })
-        .delay(edgeDuration)
-        .duration(nodeDuration)
+        .delay(enterExitDuration)
+        .duration(updateDuration)
         .attr({
           x: function(d, i) { return n3.xScale(d.renderCoord[0])+n3.options.labelOffset.x; },
           y: function(d, i) { return n3.yScale(d.renderCoord[1])+n3.options.labelOffset.y; },
@@ -812,20 +824,17 @@
 
       labels.exit()
         .transition()
-        .duration(edgeDuration)
+        .duration(enterExitDuration)
         .attr('opacity', 0)
         .remove();
   
-      var count = 0;
-      var tooltipThrottle = 50;
-      var translateTooltip = function() {
-        n3.moveTooltip();
-        count += tooltipThrottle;
-        if ( count <= duration+tooltipThrottle) {
-          setTimeout(translateTooltip, tooltipThrottle);
+      var start = Date.now();
+      d3.timer(function() {
+        if (n3.selected !== undefined) {
+          n3.moveTooltip();
         }
-      }
-      translateTooltip();
+        return Date.now() >= start +duration; 
+      })
   }
 
   /** resizes graph and other display elements to fill the target viewport */
@@ -894,29 +903,48 @@
   n3.prototype.moveTooltip = function() {
     var n3 = this;
     if (n3.selected) {
-      var type = n3.selected.inl ? 'edge' : 'node';
-      var nodeDOM = n3.container.select('.'+type+'_'+n3.selected.id).node();
+      var item = n3.selected;
+      var type = item.inl ? 'edge' : 'node';
+      var nodeDOM = n3.container.select('.'+type+'_'+item.id).node();
       if (!nodeDOM) {
         n3.hideTooltip();
       } else {
-        var coords = nodeDOM.getBoundingClientRect();
-        var offset = $(n3.domTarget.node()).position();
-        var top = coords.top - offset.top-30;
-        var left = coords.right - offset.left;
+        var coords = n3.convertCoords(item);
         var property = 'vertex.tooltip';
         if (type == 'edge') {
-          top += coords.height/2;
-          left -= coords.width/2;
           property = 'edge.tooltip';
         }
         var html = n3.selected[property] || type+" id: "+n3.selected.id;
         n3.tooltip.style({
           display: 'block',
-          top: top+'px', //FIXME - need to offset by rendered height
-          left: left+'px',
+          bottom: coords[1]+'px', //FIXME - need to offset by rendered height
+          left: coords[0]+'px',
         }).html(html)
       }
     }
+  }
+
+  n3.prototype.convertCoords = function(item) {
+    var n3 = this;
+    var type = item.inl ? 'edge' : 'node';
+    var nodeDOM = n3.container.select('.'+type+'_'+item.id).node();
+    var ctm = nodeDOM.getScreenCTM();
+    var x, y;
+    //   var size = parseFloat(nodeDOM.getAttribute('r'));
+    //   x = (parseFloat(nodeDOM.getAttribute('cx')) + size) * ctm.a;
+    //   y = (parseFloat(nodeDOM.getAttribute('cy')) - size) * ctm.d;
+    // } else {
+      var bbox = nodeDOM.getBBox();
+    if (type == 'node') {
+      x = bbox.x + bbox.width;
+      y = bbox.y;
+    } else {
+      x = bbox.x + bbox.width/2;
+      y = bbox.y + bbox.height/2;
+    }
+    var left = (x*ctm.a) + ctm.e - n3.offset.left +1;
+    var bottom = n3.height -(y*ctm.d)-ctm.f - n3.offset.top +1;
+    return [left, bottom];
   }
 
   /** hide the tooltip and unset the selected global */

@@ -45,6 +45,7 @@
 }
 
 .graph { 
+  position: relative;
   overflow: hidden;
 }
 
