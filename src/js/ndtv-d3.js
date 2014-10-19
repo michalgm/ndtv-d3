@@ -602,16 +602,21 @@
     var prevNodeCoords = $.extend({}, n3.nodeCoords);
     var data = n3.timeIndex[time].renderData;
     
-    $.each(data.node, function(id, node){
-      if (!node.coord) {
-        node.renderCoord = n3.nodeCoords[id].coord;
+    $.each(n3.nodeCoords, function(id, nodeCoord) {
+      var node = data.node[id];
+      if (node) {
+        if (!node.coord) {
+          node.renderCoord = nodeCoord.coord;
+        } else {
+          node.renderCoord = node.coord;
+        }
+        n3.nodeCoords[id] = {
+          coord: node.renderCoord,
+          active: true,
+          size: node['vertex.cex']
+        }
       } else {
-        node.renderCoord = node.coord;
-      }
-      n3.nodeCoords[id] = {
-        coord: node.renderCoord,
-        active: true,
-        size: node['vertex.cex']
+        n3.nodeCoords[id].active = false;
       }
     });
     $.each(data.edge, function(id, edge){
