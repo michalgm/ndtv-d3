@@ -121,3 +121,11 @@
   background: rgba(255,255,255, 1);
   border: 1px solid #666;
 }
+
+.frameInfo {
+  display: none;
+  position: absolute;
+  bottom: 0px;
+  left: 0px;
+  padding: 5px;
+}

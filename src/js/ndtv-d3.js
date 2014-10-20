@@ -53,7 +53,10 @@
     if (n3.options.playControls) { n3.createPlayControls(); }
     if (n3.options.slider) { n3.createSliderControl(); }
 
-    n3.tooltip = n3.domTarget.select('.graph').append('div').attr('class', 'tooltip')
+    n3.tooltip = n3.domTarget.select('.graph').append('div').attr('class', 'tooltip');
+    n3.frameInfoDiv = n3.domTarget.select('.graph').append('div').attr('class', 'frameInfo')
+    if (n3.options.debugFrameInfo) { n3.frameInfoDiv.style('display', 'block'); }
+
     if(n3.options.graphData) { n3.loadData(n3.options.graphData); }
   }
 
@@ -82,6 +85,7 @@
       y: 10
     },
     graphData: null,              //graph data, either as JSON object or URL to json file
+    debugFrameInfo: null          //Show the slice info in corner
   };
 
   /**
@@ -187,8 +191,8 @@
     svg.call(n3.zoom)
   }
 
-  /** sets positioning on svg elements based on current DOM container size and sets data scaling factors accordingly FIXME - rename?*/
-  n3.prototype.initScales = function() {
+  /** sets positioning on svg elements based on current DOM container size and sets data scaling factors accordingly */
+  n3.prototype.updateDimensions = function() {
     var n3 = this;
     var div_width = n3.domTarget.node().offsetWidth
     var div_height = n3.domTarget.node().offsetHeight - $(n3.domTarget.select('.controls').node()).outerHeight(true);
@@ -369,7 +373,7 @@
         delete t.data; //remove redundant data that we've stored in renderData
       })      
 
-      n3.initScales();
+      n3.updateDimensions();
 
       if(n3.options.slider) {
         var sliderDiv = n3.domTarget.select('.slider');
@@ -419,7 +423,7 @@
     }
   }
 
-  // var color = d3.scale.category20();
+  var color = d3.scale.category20();
 
   /** For a given time slice, process timeIndex data and generate render data, filling in defaults as necessary
   * @param {integer} - the time index to process
@@ -478,7 +482,23 @@
             } else if (type == 'graph' && data[property]) { //graph properties get applied directly
               value = data[property];
             }
-            // if (property == 'edge.col' || property == 'vertex.col') {
+            if (value && $.type(value) === 'string') {
+              var rgba = value.match(/^rgba\((.*), ?(.*)\)$/);
+              if (rgba) {
+                value = "rgb("+rgba[1]+")";
+                var fillProp = property+".stroke-opacity";
+                if (property == 'vertex.col' || property == 'bg' || property == 'label.col' || property == 'edge.col') {
+                  fillProp = property+".fill-opacity";
+                }
+                itemProperties[fillProp] = rgba[2];
+              }
+            }
+            // if (property == 'vertex.col') {
+              // value = value.replace(/,[\d\.]*\)$/, ',0.7)');
+              // value = value.replace('rgba', 'rgb').replace(/,[\d\.]*\)$/, ')');
+              //console.log(value)
+            // }
+            // if (property == 'edge.col' || property == 'vertex.col' || property == 'label.col') {
             //   value = type == 'edge' ? color(time) : color(time+1);
             // }
             itemProperties[property] = value;
@@ -552,6 +572,7 @@
   * @param {NDTV_D3}
   * @param {boolean} - If true, positions end of line offset of node radius to accomodate arrowhead 
   * @param {boolean} - If true, draws path using current node positions (before animation begins)
+  * @private
   */
   n3.prototype.drawEdge = function(selection, n3, usearrows, start) {
     selection.attr({
@@ -664,6 +685,7 @@
     var n3 = this;
 
     var renderData = n3.updateSliceRenderData(n3.currTime);
+    n3.frameInfoDiv.html(n3.currTime+': '+n3.timeIndex[n3.currTime].start + '-'+n3.timeIndex[n3.currTime].end)
 
     var enterExitDuration = duration * n3.options.enterExitAnimationFactor;
     var updateDuration = duration * (1-n3.options.enterExitAnimationFactor);
@@ -684,7 +706,7 @@
     });
 
     n3.domTarget.select('.background').transition()
-      .style({fill: renderData.graph['bg']});
+      .style({fill: renderData.graph['bg'], 'fill-opacity': renderData.graph['bg.fill-opacity']});
 
     var showInfo = function(d) {
       if(! n3.selected || n3.selected.id !== d.id) {
@@ -726,7 +748,8 @@
           .delay(enterExitDuration)
           .duration(updateDuration)
           .attr({
-            fill: function(d) { return d['edge.col']; }
+            fill: function(d) { return d['edge.col']; },
+            'fill-opacity': function(d) { return d['edge.col.stroke-opacity']; }
           })
 
         markers.exit().selectAll('path')
@@ -765,6 +788,7 @@
         })
         .style({
           'stroke': function(d) { return d['edge.col']},
+          'stroke-opacity': function(d) { return d['edge.col.stroke-opacity']; },
           'stroke-width': function(d) { return d['edge.lwd']; },
         })
         .call(n3.drawEdge, n3, renderData.graph.usearrows)
@@ -782,8 +806,10 @@
     var styleNodes = function(selection) {
       selection.style({
         'fill': function(d, i) {return d['vertex.col']; },
+        'fill-opacity': function(d, i) {return d['vertex.col.fill-opacity']; },
         'stroke-width': function(d) {return d['vertex.lwd']; },
         'stroke': function(d) {return d['vertex.border']; },
+        'stroke-opacity': function(d) {return d['vertex.border.stroke-opacity']; },
       })
       selection.filter('circle').call(n3.drawCircleNode, n3)
       selection.filter('path').call(n3.drawPolygonNode, n3)
@@ -833,6 +859,7 @@
         .text(function(d, i) { return d.label; })
         .style({
           'fill': function(d) {return d['label.col']; },
+          'fill-opacity': function(d) {return d['label.col.fill-opacity']; },
         })
         .transition()
         .duration(enterExitDuration)
@@ -848,6 +875,7 @@
         .text(function(d, i) { return d.label; })
         .style({
           'fill': function(d) {return d['label.col']; },
+          'fill-opacity': function(d) {return d['label.col.fill-opacity']; },
         })
 
       labels.exit()
@@ -868,7 +896,7 @@
   /** resizes graph and other display elements to fill the target viewport */
   n3.prototype.resizeGraph = function() {
     var n3 = this;
-    n3.initScales();
+    n3.updateDimensions();
 
     n3.container.selectAll('.edge').call(n3.drawEdge, n3, n3.timeIndex[n3.currTime].renderData.graph.usearrows)
 
@@ -938,7 +966,7 @@
         var html = n3.selected[property] || type+" id: "+n3.selected.id;
         n3.tooltip.style({
           display: 'block',
-          bottom: coords[1]+'px', //FIXME - need to offset by rendered height
+          bottom: coords[1]+'px',
           left: coords[0]+'px',
         }).html(html)
       }
@@ -999,6 +1027,7 @@
       n3.animateGraph(n3.currTime+1, n3.currTime+1); 
     }
   }
+
   /** animate the graph over all time slices, starting at current slice
   * @param {boolean} - if true, animate slices backwards until beginning of time index, other play until end
   */
