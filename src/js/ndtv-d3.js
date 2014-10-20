@@ -3,7 +3,79 @@
   root.ndtv_d3 = factory();
 }(this, function() {
   "use strict";
+ 
+  /**
+  * Public options to control visualization functionality
+  * @constant {object}
+  * @global
+  * @default
+  */
+  var default_options = {
+    animationDuration: 800,       //Duration of each step animation during play or step actions, in milliseconds
+    enterExitAnimationFactor: 0,  //Percentage (0-1) of total step animation time that enter/exit animations should take
+    labelOffset: {                //pixel offset of labels
+      x: 12,
+      y: 0
+    },
+    baseFontSize: '14',           //Font size, in pixels, for labels with cex value of 1
+    nodeSizeFactor: 0.01,         //Percentage (0-1) of viewport size that a node of size 1 will be rendered at
+    dataChooser: false,           //show a select box for choosing different graphs?
+    dataChooserDir: 'data/',      //web path to dir containing data json files
+    playControls: true,           //show the player controls
+    slider: true,                 //show the slider control
+    animateOnLoad: false,         //play the graph animation on page load
+    margin: {                     //graph render area margins
+      x: 20,
+      y: 10
+    },
+    graphData: null,              //graph data, either as JSON object or URL to json file
+    debugFrameInfo: false,        //Show the slice info in corner
+    debugDurationControl: false,  //Show a control to change duration speed
+  };
 
+  /**
+  * Supported NDTV network properties and their default values
+  * @constant {object}
+  * @global
+  * @default
+  */
+  var ndtvProperties = {
+    graph: {
+      xlab: null,                     // label caption below the render, on the xaxis
+      main: null,                     // main headline above the render
+      displaylabels: false ,          // should vertex labels be displayed
+      bg: '#fff',                     // background color
+      usearrows: true,                // should arrows be drawn on edges?
+      xlim: null,                     // range of x values                     
+      ylim: null,                     // range of y values  
+    }, 
+    node: {
+      coord: null,                    // coordinates for nodes
+      label: null,                    // labels for vertices
+      'label.col': '#000',            // color of node label
+      'label.cex': 1,                 // label font size scale factor
+      'vertex.cex': 1,                // vertex (node) expansion scale factor
+      'vertex.col': '#F00',           // node fill color
+      'vertex.sides': 50,             // number of sides for vertex polygon (shape)
+      'vertex.rot': 0,                // rotation for vertex polygon
+      'vertex.tooltip': '',           // vertex tooltip value
+      'vertex.border': '#000',        // color of vertex border stroke
+      'vertex.css.class': null,       // css class name applied to node
+      'vertex.label.css.class': null, // css class name applied to node label
+      'vertex.css.style': null,       // css inline-style applied to node (UNIMPLIMENTED)
+      'vertex.label.css.style': null, // css inline style applied to node label (UNIMPLEMENTED)
+    },
+    edge: {
+      'edge.lwd': 1,                  // width of vertex border stroke
+      'edge.col': '#000',             // edge stroke color
+      'edge.tooltip': null,           // edge tooltip value
+      'edge.css.class': null,         // css class name applied to edge
+      'edge.label.css.class': null,   // css class name applied to edge label
+      'edge.css.style': null,         // css inline-style applied to edge (UNIMPLIMENTED)
+      'edge.label.css.style': null,   // css inline style applied to edge label (UNIMPLEMENTED)
+    }
+  }
+  
 
   /**
   * Initialize a new ndtv-d3 instance
@@ -56,82 +128,20 @@
     n3.tooltip = n3.domTarget.select('.graph').append('div').attr('class', 'tooltip');
     n3.frameInfoDiv = n3.domTarget.select('.graph').append('div').attr('class', 'frameInfo')
     if (n3.options.debugFrameInfo) { n3.frameInfoDiv.style('display', 'block'); }
-
+    if (n3.options.debugDurationControl) { 
+      var durationControl = n3.domTarget.select('.graph').insert('div', ':first-child').attr('class', 'durationControlContainer');
+      var durationSlider = d3.slider().min(0).max(8).axis(new d3.svg.axis().ticks(5)).step(1).value(n3.options.animationDuration/1000);
+      durationControl.call(durationSlider)
+      durationSlider.on('slide', function(evt, value){
+        n3.options.animationDuration = value*1000;
+        if(n3.options.slider) {
+          n3.slider.animate(n3.options.animationDuration)
+        }
+      })
+    }
     if(n3.options.graphData) { n3.loadData(n3.options.graphData); }
   }
 
-  /**
-  * Public options to control visualization functionality
-  * @constant {object}
-  * @global
-  * @default
-  */
-  var default_options = {
-    animationDuration: 800,       //Duration of each step animation during play or step actions, in milliseconds
-    scrubDuration: 0,             //Sum duration of all step animations when scrubbing, regardless of # of steps
-    enterExitAnimationFactor: 0,  //Percentage (0-1) of total step animation time that enter/exit animations should take
-    labelOffset: {                //pixel offset of labels
-      x: 12,
-      y: 0
-    },
-    baseFontSize: '14',           //Font size, in pixels, for labels with cex value of 1
-    nodeSizeFactor: 0.01,         //Percentage (0-1) of viewport size that a node of size 1 will be rendered at
-    dataChooser: false,           //show a select box for choosing different graphs?
-    dataChooserDir: 'data/',      //web path to dir containing data json files
-    playControls: true,           //show the player controls
-    slider: true,                 //show the slider control
-    animateOnLoad: false,         //play the graph animation on page load
-    margin: {                     //graph render area margins
-      x: 20,
-      y: 10
-    },
-    graphData: null,              //graph data, either as JSON object or URL to json file
-    debugFrameInfo: null          //Show the slice info in corner
-  };
-
-  /**
-  * Supported NDTV network properties and their default values
-  * @constant {object}
-  * @global
-  * @default
-  */
-  var ndtvProperties = {
-    graph: {
-      xlab: null,                     // label caption below the render, on the xaxis
-      main: null,                     // main headline above the render
-      displaylabels: false ,          // should vertex labels be displayed
-      bg: '#fff',                     // background color
-      usearrows: true,                // should arrows be drawn on edges?
-      xlim: null,                     // range of x values                     
-      ylim: null,                     // range of y values  
-    }, 
-    node: {
-      coord: null,                    // coordinates for nodes
-      label: null,                    // labels for vertices
-      'label.col': '#000',            // color of node label
-      'label.cex': '1',               // label font size scale factor
-      'vertex.cex': 1,                // vertex (node) expansion scale factor
-      'vertex.col': '#F00',           // node fill color
-      'vertex.sides': 50,             // number of sides for vertex polygon (shape)
-      'vertex.rot': 0,                // rotation for vertex polygon
-      'vertex.tooltip': '',           // vertex tooltip value
-      'vertex.border': '#000',        // color of vertex border stroke
-      'vertex.css.class': null,       // css class name applied to node
-      'vertex.label.css.class': null, // css class name applied to node label
-      'vertex.css.style': null,       // css inline-style applied to node (UNIMPLIMENTED)
-      'vertex.label.css.style': null, // css inline style applied to node label (UNIMPLEMENTED)
-    },
-    edge: {
-      'edge.lwd': 1,                  // width of vertex border stroke
-      'edge.col': '#000',             // edge stroke color
-      'edge.tooltip': null,           // edge tooltip value
-      'edge.css.class': null,         // css class name applied to edge
-      'edge.label.css.class': null,   // css class name applied to edge label
-      'edge.css.style': null,         // css inline-style applied to edge (UNIMPLIMENTED)
-      'edge.label.css.style': null,   // css inline style applied to edge label (UNIMPLEMENTED)
-    }
-  }
-  
   /**
   * Initialize the SVG element and related DOM elements and listeners
   * @param {D3Selection} - DOM element to insert svg into
@@ -394,8 +404,7 @@
           var event = d3.event;
           if (event.type == 'drag' || d3.select(event.target).classed('d3-slider')) {
             n3.endAnimation();
-            var duration = n3.options.scrubDuration/Math.abs(n3.currTime-valIndex[value]);
-            n3.animateGraph(n3.currTime, valIndex[value], duration, true);
+            n3.animateGraph(n3.currTime, valIndex[value], true);
           }
         })
         
@@ -403,7 +412,7 @@
           n3.slider.animate(n3.options.animationDuration);
         })
         sliderDiv.on('mousedown', function(e) { 
-          n3.slider.animate(n3.options.scrubDuration);
+          n3.slider.animate(0);
         })
 
         sliderDiv.call(n3.slider);
@@ -918,11 +927,11 @@
   * @param {milliseconds} - the amount of time the transition animation should take
   * @param {boolean} - don't update time slider - FIXME - do we really need this?
   */
-  n3.prototype.animateGraph = function(time, endTime, duration, noUpdate) {
+  n3.prototype.animateGraph = function(time, endTime, immediate) {
     var n3 = this;
     if (time > n3.timeIndex.length -1 || time < 0) { return; }
 
-    duration = duration === undefined ? n3.options.animationDuration : duration;
+    var duration = immediate ? 0 : n3.options.animationDuration;
     endTime = endTime === undefined ? n3.timeIndex.length -1 : endTime;
     var nextTime;
     if (time == endTime) {
@@ -935,13 +944,13 @@
 
     n3.currTime = time == n3.currTime ? nextTime : time;
     //console.log(n3.currTime + ' '+time+' '+endTime+ ' '+nextTime+ ' '+n3.prevTime)
-    if(! noUpdate && n3.options.slider) {
+    if(! immediate && n3.options.slider) {
       n3.slider.value(n3.timeIndex[n3.currTime].start[0]);
     }
     n3.updateGraph(duration);
     if (n3.currTime != endTime) {
       n3.animate = setTimeout(function(){
-        n3.animateGraph(nextTime, endTime, duration, noUpdate);
+        n3.animateGraph(nextTime, endTime, immediate);
       }, duration)
     }
   }

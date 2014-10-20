@@ -129,3 +129,10 @@
   left: 0px;
   padding: 5px;
 }
+
+.durationControlContainer {
+   position: absolute;
+   top: 5px;
+   right: 5px;
+   width: 20%;
+}
