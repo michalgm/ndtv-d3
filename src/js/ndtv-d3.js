@@ -392,7 +392,7 @@
           var event = d3.event;
           if (event.type == 'drag' || d3.select(event.target).classed('d3-slider')) {
             n3.endAnimation();
-            var duration = n3.options.scrubDuration/Math.abs(n3.currTime-value);
+            var duration = n3.options.scrubDuration/Math.abs(n3.currTime-valIndex[value]);
             n3.animateGraph(n3.currTime, valIndex[value], duration, true);
           }
         })
@@ -493,11 +493,6 @@
                 itemProperties[fillProp] = rgba[2];
               }
             }
-            // if (property == 'vertex.col') {
-              // value = value.replace(/,[\d\.]*\)$/, ',0.7)');
-              // value = value.replace('rgba', 'rgb').replace(/,[\d\.]*\)$/, ')');
-              //console.log(value)
-            // }
             // if (property == 'edge.col' || property == 'vertex.col' || property == 'label.col') {
             //   value = type == 'edge' ? color(time) : color(time+1);
             // }
