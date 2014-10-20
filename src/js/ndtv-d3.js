@@ -74,6 +74,7 @@
       x: 12,
       y: 0
     },
+    baseFontSize: '14',           //Font size, in pixels, for labels with cex value of 1
     nodeSizeFactor: 0.01,         //Percentage (0-1) of viewport size that a node of size 1 will be rendered at
     dataChooser: false,           //show a select box for choosing different graphs?
     dataChooserDir: 'data/',      //web path to dir containing data json files
@@ -106,9 +107,10 @@
     }, 
     node: {
       coord: null,                    // coordinates for nodes
-      'vertex.cex': 1,                // vertex (node) expansion scale factor
       label: null,                    // labels for vertices
       'label.col': '#000',            // color of node label
+      'label.cex': '1',               // label font size scale factor
+      'vertex.cex': 1,                // vertex (node) expansion scale factor
       'vertex.col': '#F00',           // node fill color
       'vertex.sides': 50,             // number of sides for vertex polygon (shape)
       'vertex.rot': 0,                // rotation for vertex polygon
@@ -855,6 +857,7 @@
         .style({
           'fill': function(d) {return d['label.col']; },
           'fill-opacity': function(d) {return d['label.col.fill-opacity']; },
+          'font-size': function(d) { return n3.options.baseFontSize * d['label.cex'];}
         })
         .transition()
         .duration(enterExitDuration)
