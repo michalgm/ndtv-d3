@@ -4,14 +4,14 @@
 
 * [class: ndtv_d3](#ndtv_d3)
   * [new ndtv_d3()](#new_ndtv_d3)
-  * [ndtv_d3.SVGSetup()](#ndtv_d3#SVGSetup)
+  * [ndtv_d3.SVGSetup(domTarget)](#ndtv_d3#SVGSetup)
   * [ndtv_d3.initScales()](#ndtv_d3#initScales)
   * [ndtv_d3.createDataChooser()](#ndtv_d3#createDataChooser)
   * [ndtv_d3.createPlayControls()](#ndtv_d3#createPlayControls)
   * [ndtv_d3.createSliderControl()](#ndtv_d3#createSliderControl)
-  * [ndtv_d3.getLineCoords(d, usearrows, start)](#ndtv_d3#getLineCoords)
   * [ndtv_d3.loadData(graphData)](#ndtv_d3#loadData)
-  * [ndtv_d3.drawGraph(duration)](#ndtv_d3#drawGraph)
+  * [ndtv_d3.drawEdge(selection, n3, usearrows, start)](#ndtv_d3#drawEdge)
+  * [ndtv_d3.updateGraph(duration)](#ndtv_d3#updateGraph)
   * [ndtv_d3.resizeGraph()](#ndtv_d3#resizeGraph)
   * [ndtv_d3.animateGraph(time, endTime, duration, noUpdate)](#ndtv_d3#animateGraph)
   * [ndtv_d3.moveTooltip()](#ndtv_d3#moveTooltip)
@@ -24,7 +24,6 @@
 
 * [const: default_options](#default_options)
 * [const: ndtvProperties](#ndtvProperties)
-* [const: graph](#graph)
  
 <a name="ndtv_d3"></a>
 #class: ndtv_d3
@@ -32,14 +31,14 @@
 
 * [class: ndtv_d3](#ndtv_d3)
   * [new ndtv_d3()](#new_ndtv_d3)
-  * [ndtv_d3.SVGSetup()](#ndtv_d3#SVGSetup)
+  * [ndtv_d3.SVGSetup(domTarget)](#ndtv_d3#SVGSetup)
   * [ndtv_d3.initScales()](#ndtv_d3#initScales)
   * [ndtv_d3.createDataChooser()](#ndtv_d3#createDataChooser)
   * [ndtv_d3.createPlayControls()](#ndtv_d3#createPlayControls)
   * [ndtv_d3.createSliderControl()](#ndtv_d3#createSliderControl)
-  * [ndtv_d3.getLineCoords(d, usearrows, start)](#ndtv_d3#getLineCoords)
   * [ndtv_d3.loadData(graphData)](#ndtv_d3#loadData)
-  * [ndtv_d3.drawGraph(duration)](#ndtv_d3#drawGraph)
+  * [ndtv_d3.drawEdge(selection, n3, usearrows, start)](#ndtv_d3#drawEdge)
+  * [ndtv_d3.updateGraph(duration)](#ndtv_d3#updateGraph)
   * [ndtv_d3.resizeGraph()](#ndtv_d3#resizeGraph)
   * [ndtv_d3.animateGraph(time, endTime, duration, noUpdate)](#ndtv_d3#animateGraph)
   * [ndtv_d3.moveTooltip()](#ndtv_d3#moveTooltip)
@@ -58,8 +57,12 @@ Initialize a new ndtv-d3 instance
 -  `string` | `HTMLElement` - A CSS selector string or DOM element reference specifying the target dom element the network should be initialized to  
 
 <a name="ndtv_d3#SVGSetup"></a>
-##ndtv_d3.SVGSetup()
+##ndtv_d3.SVGSetup(domTarget)
 Initialize the SVG element and related DOM elements and listeners
+
+**Params**
+
+- domTarget `D3Selection` - DOM element to insert svg into  
 
 <a name="ndtv_d3#initScales"></a>
 ##ndtv_d3.initScales()
@@ -77,16 +80,6 @@ creates the optional play controls div using svg icons and defines the attached 
 ##ndtv_d3.createSliderControl()
 creates the time slider controls and defines attached events
 
-<a name="ndtv_d3#getLineCoords"></a>
-##ndtv_d3.getLineCoords(d, usearrows, start)
-look up the coordinates for an edge given the time
-
-**Params**
-
-- d `object` - the D3 data object  
-- usearrows `boolean` - If true, positions end of line offset of node radius to accomodate arrowhead  
-- start `boolean` - If true, draws path using current node positions (before animation begins)  
-
 <a name="ndtv_d3#loadData"></a>
 ##ndtv_d3.loadData(graphData)
 load and process the JSON formatted data
@@ -95,8 +88,19 @@ load and process the JSON formatted data
 
 - graphData `url` | `JSON` - either a NDTV-generated JSON object, or a URL path to file containing JSON data  
 
-<a name="ndtv_d3#drawGraph"></a>
-##ndtv_d3.drawGraph(duration)
+<a name="ndtv_d3#drawEdge"></a>
+##ndtv_d3.drawEdge(selection, n3, usearrows, start)
+create a path descriptions on the given data selection
+
+**Params**
+
+- selection `object` - the D3 data selection  
+- n3 `NDTV_D3`  
+- usearrows `boolean` - If true, positions end of line offset of node radius to accomodate arrowhead  
+- start `boolean` - If true, draws path using current node positions (before animation begins)  
+
+<a name="ndtv_d3#updateGraph"></a>
+##ndtv_d3.updateGraph(duration)
 render the graph to reflect the state at currTime, transitioning elements over a given duration
 
 **Params**
@@ -162,6 +166,3 @@ Supported NDTV network properties and their default values
 
 **Type**: `object`  
 **Default**: `{"graph":"","node":"","edge":""}`  
-<a name="graph"></a>
-#const: graph
-**Type**: `object`  

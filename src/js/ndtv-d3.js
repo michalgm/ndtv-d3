@@ -39,55 +39,6 @@
     $.extend(true, n3.options, default_options);
     $.extend(true, n3.options, options);
 
-    /** initializes a D3 line drawing function
-    * @private */
-    var drawLine = function() {
-      return d3.svg.line()
-        .x(function(d){return d[0];})
-        .y(function(d){return d[1];})
-    }
-
-    /** creates circle attributes for given node selection
-    * @param {D3selection}
-    * @private
-    */
-    this.drawCircleNode = function(selection){
-      selection.attr({
-        cx: function(d, i) { return n3.xScale(d.renderCoord[0]); },
-        cy: function(d, i) { return n3.yScale(d.renderCoord[1]); },
-        r: function(d, i) { return d['vertex.cex'] * n3.baseNodeSize; },
-      })
-    }
-
-    /** creates a polygon-shaped path attribute for given node selection
-    * @param {D3selection}
-    * @private
-    */
-    this.drawPolygonNode = function(selection){
-      selection.attr({
-        d: function(d, i) { 
-          var sides = d['vertex.sides'];
-          var size = d['vertex.cex'] * n3.baseNodeSize;
-          var coords = d.renderCoord;
-          var rotation = d['vertex.rot'];
-          var centerX = n3.xScale(coords[0]);
-          var centerY = n3.yScale(coords[1]);
-
-          var rot = rotation * 2 * Math.PI/360
-          var base = 1/sides * 2 * Math.PI;
-          var poly = [];
-
-          for (var i = 1; i <= sides; i++) {
-              var ang = i * base + rot;
-              var x = centerX + size * Math.cos(ang);
-              var y = centerY + size * Math.sin(ang);
-              poly.push([x, y]);
-          }
-          return drawLine()(poly) + 'Z';
-        },
-      })
-    }
-
     if (!target) {
       target = d3.select('body').append('div').style({width: '100%', height: '100%'}).node();
       d3.selectAll('html, body').classed({'ndtv-fullscreen': true})
@@ -370,50 +321,6 @@
     var n3 = this;
     n3.domTarget.select('.controls').append('div').attr('class', 'slider-control-container').append('div').attr('class', 'slider');
   }
-
-  /** look up the coordinates for an edge given the time
-  * @param {object} - the D3 data object
-  * @param {boolean} - If true, positions end of line offset of node radius to accomodate arrowhead 
-  * @param {boolean} - If true, draws path using current node positions (before animation begins)
-  */
-  n3.prototype.getLineCoords = function(d, usearrows, start) {
-    var n3 = this;
-
-    var type = start ? 'startCoords' : 'coords';
-
-    var startNode = d.inl[type];
-    var endNode = d.outl[type];
-
-    var x1 = n3.xScale(startNode.coord[0]);
-    var y1 = n3.yScale(startNode.coord[1]);
-    var x2 = n3.xScale(endNode.coord[0]);
-    var y2 = n3.yScale(endNode.coord[1]);
-    if(usearrows) {
-      var radius = endNode.size * n3.baseNodeSize + 2;
-
-      // Determine line lengths
-      var xlen = x2 - x1;
-      var ylen = y2 - y1;
-
-      // Determine hypotenuse length
-      var hlen = Math.sqrt(Math.pow(xlen,2) + Math.pow(ylen,2));
-
-      // Determine the ratio between they shortened value and the full hypotenuse.
-      var ratio = (hlen - radius) / hlen;
-      var edgeX = x1 + (xlen * ratio);
-      var edgeY = y1 + (ylen * ratio);
-      
-      //If the ratio is invalid, just use the original coordinates
-      if (! $.isNumeric(ratio)) { 
-        edgeX = x2;
-        edgeY = y2;
-      }
-    } else {
-      edgeX = x2;
-      edgeY = y2;
-    }
-    return 'M '+x1+' '+y1+' L '+edgeX+' '+edgeY;
-  }
  
   /** load and process the JSON formatted data
   * @param {url|JSON} - either a NDTV-generated JSON object, or a URL path to file containing JSON data
@@ -499,7 +406,7 @@
       if (n3.options.animateOnLoad) {
         n3.playAnimation();
       } else {
-        n3.drawGraph(n3.options.animationDuration);
+        n3.updateGraph(n3.options.animationDuration);
       }
     };
 
@@ -511,6 +418,8 @@
       });
     }
   }
+
+  // var color = d3.scale.category20();
 
   /** For a given time slice, process timeIndex data and generate render data, filling in defaults as necessary
   * @param {integer} - the time index to process
@@ -569,6 +478,9 @@
             } else if (type == 'graph' && data[property]) { //graph properties get applied directly
               value = data[property];
             }
+            // if (property == 'edge.col' || property == 'vertex.col') {
+            //   value = type == 'edge' ? color(time) : color(time+1);
+            // }
             itemProperties[property] = value;
           })
 
@@ -583,7 +495,7 @@
             sliceRenderData[type] = itemProperties;
           } else {
             sliceRenderData[type][id] = itemProperties;
-          }        
+          }
         } else if (type == 'node') {
           n3.nodeCoords[id].active = false;
         }
@@ -635,10 +547,120 @@
     return data;
   }
 
+  /** create a path descriptions on the given data selection
+  * @param {object} - the D3 data selection
+  * @param {NDTV_D3}
+  * @param {boolean} - If true, positions end of line offset of node radius to accomodate arrowhead 
+  * @param {boolean} - If true, draws path using current node positions (before animation begins)
+  */
+  n3.prototype.drawEdge = function(selection, n3, usearrows, start) {
+    selection.attr({
+      d: function(d) {
+       var type = start ? 'startCoords' : 'coords';
+
+       var startNode = d.inl[type];
+       var endNode = d.outl[type];
+
+       var x1 = n3.xScale(startNode.coord[0]);
+       var y1 = n3.yScale(startNode.coord[1]);
+       var x2 = n3.xScale(endNode.coord[0]);
+       var y2 = n3.yScale(endNode.coord[1]);
+       if(usearrows) {
+         var radius = endNode.size * n3.baseNodeSize + 2;
+
+         // Determine line lengths
+         var xlen = x2 - x1;
+         var ylen = y2 - y1;
+
+         // Determine hypotenuse length
+         var hlen = Math.sqrt(Math.pow(xlen,2) + Math.pow(ylen,2));
+
+         // Determine the ratio between they shortened value and the full hypotenuse.
+         var ratio = (hlen - radius) / hlen;
+         var edgeX = x1 + (xlen * ratio);
+         var edgeY = y1 + (ylen * ratio);
+         
+         //If the ratio is invalid, just use the original coordinates
+         if (! $.isNumeric(ratio)) { 
+           edgeX = x2;
+           edgeY = y2;
+         }
+       } else {
+         edgeX = x2;
+         edgeY = y2;
+       }
+       return 'M '+x1+' '+y1+' L '+edgeX+' '+edgeY;     
+      },
+    })
+  }
+
+  /** initializes a D3 line drawing function
+  * @private */
+  var drawLine = function() {
+    return d3.svg.line()
+      .x(function(d){return d[0];})
+      .y(function(d){return d[1];})
+  }
+
+  /** creates a polygon-shaped path attribute for given node selection
+  * @param {D3selection}
+  * @param {NDTV_D3}
+  * @private
+  */
+  n3.prototype.drawPolygonNode = function(selection, n3){
+    selection.attr({
+      d: function(d, i) { 
+        var sides = d['vertex.sides'];
+        var size = d['vertex.cex'] * n3.baseNodeSize;
+        var coords = d.renderCoord;
+        var rotation = d['vertex.rot'];
+        var centerX = n3.xScale(coords[0]);
+        var centerY = n3.yScale(coords[1]);
+
+        var rot = rotation * 2 * Math.PI/360
+        var base = 1/sides * 2 * Math.PI;
+        var poly = [];
+
+        for (var i = 1; i <= sides; i++) {
+            var ang = i * base + rot;
+            var x = centerX + size * Math.cos(ang);
+            var y = centerY + size * Math.sin(ang);
+            poly.push([x, y]);
+        }
+        return drawLine()(poly) + 'Z';
+      },
+    })
+  }
+
+  /** creates circle attributes for given node selection
+  * @param {D3selection}
+  * @param {NDTV_D3}
+  * @private
+  */
+  n3.prototype.drawCircleNode = function(selection, n3){
+    selection.attr({
+      cx: function(d, i) { return n3.xScale(d.renderCoord[0]); },
+      cy: function(d, i) { return n3.yScale(d.renderCoord[1]); },
+      r: function(d, i) { return d['vertex.cex'] * n3.baseNodeSize; },
+    })
+  }
+
+  /** positions the node labels
+  * @param {D3selection}
+  * @param {NDTV_D3}
+  * @private
+  */
+  n3.prototype.drawNodeLabel = function(selection, n3){
+    selection.attr({
+      x: function(d, i) { return n3.xScale(d.renderCoord[0])+n3.options.labelOffset.x; },
+      y: function(d, i) { return n3.yScale(d.renderCoord[1])+n3.options.labelOffset.y; },
+    })
+  }
+
   /** render the graph to reflect the state at currTime, transitioning elements over a given duration
   * @param {milliseconds} - the amount of time the transition animation should take
   */
-  n3.prototype.drawGraph = function(duration) {
+  n3.prototype.updateGraph = function(duration) {
     var n3 = this;
 
     var renderData = n3.updateSliceRenderData(n3.currTime);
@@ -700,7 +722,7 @@
             fill: 'green'
           });
 
-        markers.selectAll('path').transition()
+        markers.select('path').transition()
           .delay(enterExitDuration)
           .duration(updateDuration)
           .attr({
@@ -713,8 +735,8 @@
           })
         
         markers.exit().transition()
-          .delay(enterExitDuration)
-          .duration(updateDuration)
+          .delay(duration)
+          .duration(0)
           .remove()
     }
 
@@ -722,7 +744,6 @@
       lines.enter().append('path')
         .attr({
           class: function(d) { return 'edge edge_'+d.id+' '+(d['edge.css.class'] || ''); },     
-          d: function(d) {return n3.getLineCoords(d, renderData.graph.usearrows, 1);  },
           opacity: 0,
           "marker-end": function(d) { if(renderData.graph.usearrows) { return "url(#arrowhead_"+d.id+")"; }}
         })
@@ -730,14 +751,24 @@
           'stroke': 'green',
           'stroke-width': function(d) { return d['edge.lwd']; }
         })
+        .call(n3.drawEdge, n3, renderData.graph.usearrows, 1)
         .on('click', showInfo)
         .transition()
         .duration(enterExitDuration)
         .attr({opacity: 1})
        
-      // lines.transition()
-      //   .delay(enterExitDuration-6)
-      //   .duration(0)
+      lines.transition()
+        .delay(enterExitDuration)
+        .duration(updateDuration)
+        .attr({
+          opacity: 1
+        })
+        .style({
+          'stroke': function(d) { return d['edge.col']},
+          'stroke-width': function(d) { return d['edge.lwd']; },
+        })
+        .call(n3.drawEdge, n3, renderData.graph.usearrows)
+
       lines.exit()
         .style('stroke', 'red')
         .transition()
@@ -745,28 +776,22 @@
         .attr('opacity', 0)          
         .remove();
 
-      lines.transition()
-        .delay(enterExitDuration)
-        .duration(updateDuration)
-        .attr({
-          d: function(d) {return n3.getLineCoords(d, renderData.graph.usearrows);  },
-          opacity: 1
-        })
-        .style({
-          'stroke': function(d) { return d['edge.col']},
-          'stroke-width': function(d) { return d['edge.lwd']; },
-        })
-
+    /** apply styles and atrributes to nodes
+    * @private
+    */
     var styleNodes = function(selection) {
       selection.style({
         'fill': function(d, i) {return d['vertex.col']; },
         'stroke-width': function(d) {return d['vertex.lwd']; },
         'stroke': function(d) {return d['vertex.border']; },
       })
-      selection.filter('circle').call(n3.drawCircleNode)
-      selection.filter('path').call(n3.drawPolygonNode)
+      selection.filter('circle').call(n3.drawCircleNode, n3)
+      selection.filter('path').call(n3.drawPolygonNode, n3)
     }
 
+    /** set attributes & transitions to be applied to new nodes
+    * @private
+    */
     var createNodes = function(selection) {
       selection
         .attr({
@@ -802,10 +827,9 @@
       labels.enter().append('text').filter(function(d) { return renderData.displaylabels !== false; })
         .attr({
           class: function(d) { return 'label label_'+d.id+ ' '+ (d['vertex.label.css.class'] || ''); },
-          x: function(d, i) { return n3.xScale(d.renderCoord[0])+n3.options.labelOffset.x; },
-          y: function(d, i) { return n3.yScale(d.renderCoord[1])+n3.options.labelOffset.y; },
           opacity: 0
         })
+        .call(n3.drawNodeLabel, n3)
         .text(function(d, i) { return d.label; })
         .style({
           'fill': function(d) {return d['label.col']; },
@@ -818,10 +842,9 @@
         .delay(enterExitDuration)
         .duration(updateDuration)
         .attr({
-          x: function(d, i) { return n3.xScale(d.renderCoord[0])+n3.options.labelOffset.x; },
-          y: function(d, i) { return n3.yScale(d.renderCoord[1])+n3.options.labelOffset.y; },
           opacity: 1
         })
+        .call(n3.drawNodeLabel, n3)
         .text(function(d, i) { return d.label; })
         .style({
           'fill': function(d) {return d['label.col']; },
@@ -847,19 +870,12 @@
     var n3 = this;
     n3.initScales();
 
-    var lines = n3.container.select('.edges').selectAll('.edge')
-      .attr({
-        d: function(d) {return n3.getLineCoords(d, n3.timeIndex[n3.currTime].renderData.graph.usearrows);  },
-      });
+    n3.container.selectAll('.edge').call(n3.drawEdge, n3, n3.timeIndex[n3.currTime].renderData.graph.usearrows)
 
-    n3.container.selectAll('circle.node').call(n3.drawCircleNode)
-    n3.container.selectAll('path.node').call(n3.drawPolygonNode)
+    n3.container.selectAll('circle.node').call(n3.drawCircleNode, n3)
+    n3.container.selectAll('path.node').call(n3.drawPolygonNode, n3)
 
-    var labels = n3.container.select('.labels').selectAll('text')
-      .attr({
-        x: function(d, i) { return n3.xScale(d.renderCoord[0])+n3.options.labelOffset.x; },
-        y: function(d, i) { return n3.yScale(d.renderCoord[1])+n3.options.labelOffset.y; },
-      })
+    n3.container.select('.labels').selectAll('text').call(n3.drawNodeLabel, n3)
 
     n3.moveTooltip();
     //redraw the slider control 
@@ -896,7 +912,7 @@
     if(! noUpdate && n3.options.slider) {
       n3.slider.value(n3.timeIndex[n3.currTime].start[0]);
     }
-    n3.drawGraph(duration);
+    n3.updateGraph(duration);
     if (n3.currTime != endTime) {
       n3.animate = setTimeout(function(){
         n3.animateGraph(nextTime, endTime, duration, noUpdate);
@@ -939,7 +955,7 @@
     //   x = (parseFloat(nodeDOM.getAttribute('cx')) + size) * ctm.a;
     //   y = (parseFloat(nodeDOM.getAttribute('cy')) - size) * ctm.d;
     // } else {
-      var bbox = nodeDOM.getBBox();
+    var bbox = nodeDOM.getBBox();
     if (type == 'node') {
       x = bbox.x + bbox.width;
       y = bbox.y;
