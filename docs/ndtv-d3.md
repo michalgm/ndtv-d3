@@ -10,7 +10,6 @@
   * [ndtv_d3.createPlayControls()](#ndtv_d3#createPlayControls)
   * [ndtv_d3.createSliderControl()](#ndtv_d3#createSliderControl)
   * [ndtv_d3.loadData(graphData)](#ndtv_d3#loadData)
-  * [ndtv_d3.drawEdge(selection, n3, usearrows, start)](#ndtv_d3#drawEdge)
   * [ndtv_d3.updateGraph(duration)](#ndtv_d3#updateGraph)
   * [ndtv_d3.resizeGraph()](#ndtv_d3#resizeGraph)
   * [ndtv_d3.animateGraph(time, endTime, duration, noUpdate)](#ndtv_d3#animateGraph)
@@ -37,7 +36,6 @@
   * [ndtv_d3.createPlayControls()](#ndtv_d3#createPlayControls)
   * [ndtv_d3.createSliderControl()](#ndtv_d3#createSliderControl)
   * [ndtv_d3.loadData(graphData)](#ndtv_d3#loadData)
-  * [ndtv_d3.drawEdge(selection, n3, usearrows, start)](#ndtv_d3#drawEdge)
   * [ndtv_d3.updateGraph(duration)](#ndtv_d3#updateGraph)
   * [ndtv_d3.resizeGraph()](#ndtv_d3#resizeGraph)
   * [ndtv_d3.animateGraph(time, endTime, duration, noUpdate)](#ndtv_d3#animateGraph)
@@ -87,17 +85,6 @@ load and process the JSON formatted data
 **Params**
 
 - graphData `url` | `JSON` - either a NDTV-generated JSON object, or a URL path to file containing JSON data  
-
-<a name="ndtv_d3#drawEdge"></a>
-##ndtv_d3.drawEdge(selection, n3, usearrows, start)
-create a path descriptions on the given data selection
-
-**Params**
-
-- selection `object` - the D3 data selection  
-- n3 `NDTV_D3`  
-- usearrows `boolean` - If true, positions end of line offset of node radius to accomodate arrowhead  
-- start `boolean` - If true, draws path using current node positions (before animation begins)  
 
 <a name="ndtv_d3#updateGraph"></a>
 ##ndtv_d3.updateGraph(duration)

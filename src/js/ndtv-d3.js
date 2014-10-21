@@ -492,8 +492,10 @@
               }
             } else if (type == 'graph' && data[property]) { //graph properties get applied directly
               value = data[property];
+            } else if (property == 'label' && sliceRenderData.graph.displaylabels) {
+              value = id;
             }
-            if (value && $.type(value) === 'string') {
+            if (value && $.type(value) === 'string' && value.match('rgba')) {
               var rgba = value.match(/^rgba\((.*), ?(.*)\)$/);
               if (rgba) {
                 value = "rgb("+rgba[1]+")";
