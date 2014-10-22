@@ -130,7 +130,7 @@
     if (n3.options.debugFrameInfo) { n3.frameInfoDiv.style('display', 'block'); }
     if (n3.options.debugDurationControl) { 
       var durationControl = n3.domTarget.select('.graph').insert('div', ':first-child').attr('class', 'durationControlContainer');
-      var durationSlider = d3.slider().min(0).max(8).axis(new d3.svg.axis().ticks(5)).step(1).value(n3.options.animationDuration/1000);
+      var durationSlider = d3.slider().min(0).max(8).axis(new d3.svg.axis().ticks(5)).value(n3.options.animationDuration/1000);
       durationControl.call(durationSlider)
       durationSlider.on('slide', function(evt, value){
         n3.options.animationDuration = value*1000;
