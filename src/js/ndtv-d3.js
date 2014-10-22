@@ -487,8 +487,6 @@
                 value = value.split('\n');
               } else if (! value && property == 'coord') {
                 console.log('missing coordinates for node '+id+ ' at time '+time+' ('+n3.timeIndex[time].start+'-'+n3.timeIndex[time].end+')');
-                //console.log('valid time slices for node '+index+' are '+n3.graph.val[index].active.join(','))
-                //console.log('filling in with last know position: '+value)
               }
             } else if (type == 'graph' && data[property]) { //graph properties get applied directly
               value = data[property];
@@ -499,11 +497,11 @@
               var rgba = value.match(/^rgba\((.*), ?(.*)\)$/);
               if (rgba) {
                 value = "rgb("+rgba[1]+")";
-                var fillProp = property+".stroke-opacity";
-                if (property == 'vertex.col' || property == 'bg' || property == 'label.col' || property == 'edge.col') {
-                  fillProp = property+".fill-opacity";
+                var opacityProp = property+".stroke-opacity";
+                if (property == 'vertex.col' || property == 'bg' || property == 'label.col') {
+                  opacityProp = property+".fill-opacity";
                 }
-                itemProperties[fillProp] = rgba[2];
+                itemProperties[opacityProp] = rgba[2];
               }
             }
             // if (property == 'edge.col' || property == 'vertex.col' || property == 'label.col') {
@@ -514,10 +512,14 @@
 
           if (type == 'edge') {
             $.each(['inl', 'outl'], function(i, direction) {
+              var otherdir = direction == 'inl' ? 'outl' : 'inl';
               itemProperties[direction] = {
                 id: item[direction][0]
               }
+              sliceRenderData.node[item[direction][0]].links[item[otherdir][0]] = id;
             });      
+          } else if (type == 'node') {
+            itemProperties.links = {};
           }
           if (type == 'graph') {
             sliceRenderData[type] = itemProperties;
@@ -724,13 +726,33 @@
         n3.hideTooltip();
       }
     }
-    
+
+    var highlightNode = function(selection, type) {
+      var node = n3.highlightedNode;
+      if (node) {
+        if (type == 'node') { 
+          selection.attr({
+            opacity: function(d) { return node.links[d.id] === undefined && d.id != node.id ? 0.2 : 1; }
+          });
+        } else {
+          selection.attr({
+            opacity: function(d) { return d.inl.id != node.id && d.outl.id != node.id ? 0.2 : 1; }
+          });
+        }
+      } else {
+        selection.attr({opacity: 1});
+      }
+    }
+
     //update selected item
     if (n3.selected) {
       n3.selected = n3.selected.inl ? renderData.edge[n3.selected.id] : renderData.node[n3.selected.id];
       if (! n3.selected) {
         n3.hideTooltip();
       } 
+    }
+    if (n3.highlightedNode) {
+      n3.highlightedNode = renderData.node[n3.highlightedNode.id];
     }
 
     if (renderData.graph.usearrows) {
@@ -786,14 +808,15 @@
         .on('click', showInfo)
         .transition()
         .duration(enterExitDuration)
-        .attr({opacity: 1})
-       
+        .call(highlightNode, 'edge')
+
+      lines.filter('.edge').transition()
+        .duration(enterExitDuration)
+        .call(highlightNode, 'edge')
+
       lines.transition()
         .delay(enterExitDuration)
         .duration(updateDuration)
-        .attr({
-          opacity: 1
-        })
         .style({
           'stroke': function(d) { return d['edge.col']},
           'stroke-opacity': function(d) { return d['edge.col.stroke-opacity']; },
@@ -834,9 +857,21 @@
         })
         .call(styleNodes)
         .on('click', showInfo)
+        .on('dblclick', function(d) {
+          if (! n3.highlightedNode || d.id != n3.highlightedNode.id) {
+            n3.highlightedNode = d;
+          } else {
+            n3.highlightedNode = null;
+          }
+          n3.container.selectAll('.node, .label').call(highlightNode, 'node');
+          n3.container.selectAll('.edge').call(highlightNode, 'edge')
+          n3.selected = n3.highlightedNode;
+          n3.moveTooltip();
+          d3.event.stopPropagation();
+        })
         .transition()
         .duration(enterExitDuration)
-        .attr('opacity', 1)
+        .call(highlightNode, 'node')
     }
 
     var nodes = n3.container.select('.nodes').selectAll('.node').data(d3.values(renderData.node), function(e) { return e.id; })
@@ -845,11 +880,13 @@
       node_groups.filter(function(d) { return d['vertex.sides'] == 50; }).append('circle').call(createNodes);
 
       nodes.filter('.node').transition()
+        .duration(enterExitDuration)
+        .call(highlightNode, 'node')
+
+      nodes.filter('.node').transition()
         .delay(enterExitDuration)
         .duration(updateDuration)
-        .attr({
-          opacity: 1
-        }).call(styleNodes)
+        .call(styleNodes)
 
       nodes.exit()
         .transition()
@@ -858,7 +895,7 @@
         .remove(); 
 
     var labels = n3.container.select('.labels').selectAll('text').data(d3.values(renderData.node), function(e) { return e.id});
-      labels.enter().append('text').filter(function(d) { return renderData.displaylabels !== false; })
+      labels.enter().append('text').filter(function(d) { return renderData.graph.displaylabels; })
         .attr({
           class: function(d) { return 'label label_'+d.id+ ' '+ (d['vertex.label.css.class'] || ''); },
           opacity: 0
@@ -872,14 +909,15 @@
         })
         .transition()
         .duration(enterExitDuration)
-        .attr('opacity', 1)
+        .call(highlightNode, 'node')
 
-      labels.transition().filter(function(d) { return renderData.graph.displaylabels !== false; })
+      labels.filter('.label').transition()
+        .duration(enterExitDuration)
+        .call(highlightNode, 'node')
+
+      labels.transition().filter(function(d) { return renderData.graph.displaylabels; })
         .delay(enterExitDuration)
         .duration(updateDuration)
-        .attr({
-          opacity: 1
-        })
         .call(n3.drawNodeLabel, n3)
         .text(function(d, i) { return d.label; })
         .style({
@@ -979,6 +1017,8 @@
           left: coords[0]+'px',
         }).html(html)
       }
+    } else {
+      n3.hideTooltip();
     }
   }
 
