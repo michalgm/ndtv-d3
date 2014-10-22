@@ -345,7 +345,9 @@
     var n3 = this;
     n3.endAnimation();
     n3.currTime = 0;
-
+    n3.highlightedNode = null;
+    n3.selected = null;
+    
     var processData = function(data) {
       console.time('loadData');
       n3.graph = data.network;
