@@ -136,3 +136,13 @@
    right: 5px;
    width: 20%;
 }
+
+.container .screen {
+  opacity: 0;
+  pointer-events: none;
+  fill: none;
+}
+
+.container .screen.network-selected {
+  opacity: .6;
+}

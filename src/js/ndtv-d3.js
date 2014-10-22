@@ -175,6 +175,7 @@
       .on('mouseup', function() { 
         if (downLocation == n3.container.attr('transform')) {
           n3.hideTooltip();
+          n3.unSelectNetwork();
         }
       })
 
@@ -183,6 +184,11 @@
     n3.container.append('g').attr('class', 'edges');
     n3.container.append('g').attr('class', 'nodes');
     n3.container.append('g').attr('class', 'labels');
+    n3.container.append('rect').attr('class', 'screen');
+    n3.container.append('g').attr('class', 'edges_selected');
+    n3.container.append('g').attr('class', 'nodes_selected');
+    n3.container.append('g').attr('class', 'labels_selected');
+
     svg.append('g').attr('class', 'main').append('text');
     svg.append('g').attr('class', 'xlab').append('text');
 
@@ -236,7 +242,7 @@
     var width = div_width - (margin.x*2);
     var height = div_height - (margin.y*2);
 
-    n3.domTarget.selectAll('svg, .background')
+    n3.domTarget.selectAll('svg, .background, .screen')
       .attr({
         width: width + margin.x * 2,
         height: height + margin.y * 2
@@ -345,7 +351,7 @@
     var n3 = this;
     n3.endAnimation();
     n3.currTime = 0;
-    n3.highlightedNode = null;
+    n3.selectedNetwork = null;
     n3.selected = null;
     
     var processData = function(data) {
@@ -690,6 +696,39 @@
     })
   }
 
+
+  n3.prototype.updateSelectedNetwork = function() {
+    var n3 = this;
+    var node = n3.selectedNetwork;
+
+    $.each(['node_group', 'edge', 'label'], function(i, classname) {
+      var selection = n3.container.selectAll('.'+classname)
+      var type = classname == 'node_group' ? 'node' : classname;
+      var unselectedTarget = n3.container.select('.'+type+'s').node();
+      var selectedTarget = n3.container.select('.'+type+'s_selected').node();
+      selection.each(function(d){
+        var target = selectedTarget;
+        if (type == 'edge') {
+          if (! node || (d.inl.id != node.id && d.outl.id != node.id)) {
+            target = unselectedTarget
+          }
+        } else {
+          if (! node || (node.links[d.id] === undefined && d.id != node.id)) {
+            target = unselectedTarget
+          }
+        } 
+        $(this).appendTo(target)
+      })    
+    })    
+  }
+
+  n3.prototype.unSelectNetwork = function() {
+    var n3 = this;
+    n3.selectedNetwork = null;
+    n3.container.select('.screen').classed({'network-selected': false});
+    n3.updateSelectedNetwork();
+  }
+
   /** render the graph to reflect the state at currTime, transitioning elements over a given duration
   * @param {milliseconds} - the amount of time the transition animation should take
   */
@@ -717,7 +756,7 @@
       }
     });
 
-    n3.domTarget.select('.background').transition()
+    n3.domTarget.selectAll('.background, .screen').transition()
       .style({fill: renderData.graph['bg'], 'fill-opacity': renderData.graph['bg.fill-opacity']});
 
     var showInfo = function(d) {
@@ -729,23 +768,6 @@
       }
     }
 
-    var highlightNode = function(selection, type) {
-      var node = n3.highlightedNode;
-      if (node) {
-        if (type == 'node') { 
-          selection.attr({
-            opacity: function(d) { return node.links[d.id] === undefined && d.id != node.id ? 0.2 : 1; }
-          });
-        } else {
-          selection.attr({
-            opacity: function(d) { return d.inl.id != node.id && d.outl.id != node.id ? 0.2 : 1; }
-          });
-        }
-      } else {
-        selection.attr({opacity: 1});
-      }
-    }
-
     //update selected item
     if (n3.selected) {
       n3.selected = n3.selected.inl ? renderData.edge[n3.selected.id] : renderData.node[n3.selected.id];
@@ -753,8 +775,8 @@
         n3.hideTooltip();
       } 
     }
-    if (n3.highlightedNode) {
-      n3.highlightedNode = renderData.node[n3.highlightedNode.id];
+    if (n3.selectedNetwork) {
+      n3.selectedNetwork = renderData.node[n3.selectedNetwork.id];
     }
 
     if (renderData.graph.usearrows) {
@@ -795,7 +817,7 @@
           .remove()
     }
 
-    var lines = n3.container.select('.edges').selectAll('.edge').data(d3.values(renderData.edge), function(e) { return e.id})
+    var lines = n3.container.selectAll('.edge').data(d3.values(renderData.edge), function(e) { return e.id})
       lines.enter().append('path')
         .attr({
           class: function(d) { return 'edge edge_'+d.id+' '+(d['edge.css.class'] || ''); },     
@@ -810,12 +832,10 @@
         .on('click', showInfo)
         .transition()
         .duration(enterExitDuration)
-        .call(highlightNode, 'edge')
+        .attr({opacity: 1})
 
-      lines.filter('.edge').transition()
-        .duration(enterExitDuration)
-        .call(highlightNode, 'edge')
-
+      if (!enterExitDuration) {lines.attr({opacity: 1}); }
+      
       lines.transition()
         .delay(enterExitDuration)
         .duration(updateDuration)
@@ -825,6 +845,7 @@
           'stroke-width': function(d) { return d['edge.lwd']; },
         })
         .call(n3.drawEdge, n3, renderData.graph.usearrows)
+        .attr({opacity: 1})
 
       lines.exit()
         .style('stroke', 'red')
@@ -860,34 +881,34 @@
         .call(styleNodes)
         .on('click', showInfo)
         .on('dblclick', function(d) {
-          if (! n3.highlightedNode || d.id != n3.highlightedNode.id) {
-            n3.highlightedNode = d;
+          if (! n3.selectedNetwork || d.id != n3.selectedNetwork.id) {
+            n3.selectedNetwork = d;
           } else {
-            n3.highlightedNode = null;
+            n3.selectedNetwork = null;
           }
-          n3.container.selectAll('.node, .label').call(highlightNode, 'node');
-          n3.container.selectAll('.edge').call(highlightNode, 'edge')
-          n3.selected = n3.highlightedNode;
+          n3.container.select('.screen').classed({'network-selected': n3.selectedNetwork})
+          n3.updateSelectedNetwork();
+          n3.selected = n3.selectedNetwork;
           n3.moveTooltip();
           d3.event.stopPropagation();
         })
         .transition()
         .duration(enterExitDuration)
-        .call(highlightNode, 'node')
+        .attr('opacity', 1)
     }
 
-    var nodes = n3.container.select('.nodes').selectAll('.node').data(d3.values(renderData.node), function(e) { return e.id; })
-      var node_groups = nodes.enter().append('g');
+    var nodes = n3.container.selectAll('.node').data(d3.values(renderData.node), function(e) { return e.id; })
+
+      var node_groups = nodes.enter().append('g').classed({'node_group' : true});
       node_groups.filter(function(d) { return d['vertex.sides'] != 50; }).append('path').call(createNodes);
       node_groups.filter(function(d) { return d['vertex.sides'] == 50; }).append('circle').call(createNodes);
 
-      nodes.filter('.node').transition()
-        .duration(enterExitDuration)
-        .call(highlightNode, 'node')
+      if (!enterExitDuration) {nodes.attr({opacity: 1}); }
 
       nodes.filter('.node').transition()
         .delay(enterExitDuration)
         .duration(updateDuration)
+        .attr('opacity', 1)
         .call(styleNodes)
 
       nodes.exit()
@@ -896,7 +917,7 @@
         .attr('opacity', 0)
         .remove(); 
 
-    var labels = n3.container.select('.labels').selectAll('text').data(d3.values(renderData.node), function(e) { return e.id});
+    var labels = n3.container.selectAll('text').data(d3.values(renderData.node), function(e) { return e.id});
       labels.enter().append('text').filter(function(d) { return renderData.graph.displaylabels; })
         .attr({
           class: function(d) { return 'label label_'+d.id+ ' '+ (d['vertex.label.css.class'] || ''); },
@@ -910,17 +931,17 @@
           'font-size': function(d) { return n3.options.baseFontSize * d['label.cex'];}
         })
         .transition()
+        .delay(0)
         .duration(enterExitDuration)
-        .call(highlightNode, 'node')
+        .attr({opacity: 1})
 
-      labels.filter('.label').transition()
-        .duration(enterExitDuration)
-        .call(highlightNode, 'node')
+      if (!enterExitDuration) {labels.attr({opacity: 1}); }
 
       labels.transition().filter(function(d) { return renderData.graph.displaylabels; })
-        .delay(enterExitDuration)
+        .delay(enterExitDuration+200)
         .duration(updateDuration)
         .call(n3.drawNodeLabel, n3)
+        //.attr({opacity: 1})
         .text(function(d, i) { return d.label; })
         .style({
           'fill': function(d) {return d['label.col']; },
@@ -932,6 +953,8 @@
         .duration(enterExitDuration)
         .attr('opacity', 0)
         .remove();
+
+      n3.updateSelectedNetwork();
   
       var start = Date.now();
       d3.timer(function() {
