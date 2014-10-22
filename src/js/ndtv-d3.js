@@ -362,7 +362,7 @@
         $(n3.domTarget.select('.data_chooser').node()).val(graphData);
         n3.domTarget.select('.video_link').attr('href', graphData.replace('.json', '.mp4'))
       }
-      n3.container.selectAll('.edges, .labels, .nodes').selectAll('*').remove();
+      n3.container.selectAll('.edge, .label, .node').remove();
 
       n3.nodeCoords = {};
 
@@ -628,7 +628,7 @@
          edgeX = x2;
          edgeY = y2;
        }
-       return 'M '+x1+' '+y1+' L '+edgeX+' '+edgeY;     
+       return 'M '+x1.toFixed(3)+' '+y1.toFixed(3)+' L '+edgeX.toFixed(3)+' '+edgeY.toFixed(3);     
       },
     })
   }
@@ -664,7 +664,7 @@
             var ang = i * base + rot;
             var x = centerX + size * Math.cos(ang);
             var y = centerY + size * Math.sin(ang);
-            poly.push([x, y]);
+            poly.push([x.toFixed(3), y.toFixed(3)]);
         }
         return drawLine()(poly) + 'Z';
       },
@@ -678,9 +678,9 @@
   */
   n3.prototype.drawCircleNode = function(selection, n3){
     selection.attr({
-      cx: function(d, i) { return n3.xScale(d.renderCoord[0]); },
-      cy: function(d, i) { return n3.yScale(d.renderCoord[1]); },
-      r: function(d, i) { return d['vertex.cex'] * n3.baseNodeSize; },
+      cx: function(d, i) { return n3.xScale(d.renderCoord[0]).toFixed(3); },
+      cy: function(d, i) { return n3.yScale(d.renderCoord[1]).toFixed(3); },
+      r: function(d, i) { return (d['vertex.cex'] * n3.baseNodeSize).toFixed(3); },
     })
   }
 
@@ -700,24 +700,33 @@
   n3.prototype.updateSelectedNetwork = function() {
     var n3 = this;
     var node = n3.selectedNetwork;
-
     $.each(['node_group', 'edge', 'label'], function(i, classname) {
       var selection = n3.container.selectAll('.'+classname)
       var type = classname == 'node_group' ? 'node' : classname;
-      var unselectedTarget = n3.container.select('.'+type+'s').node();
-      var selectedTarget = n3.container.select('.'+type+'s_selected').node();
+      var unselectedTargetClass = '.'+type+'s';
+      var selectedTargetClass = '.'+type+'s_selected';
+      var unselectedTarget = n3.container.select(unselectedTargetClass).node();
+      var selectedTarget = n3.container.select(selectedTargetClass).node();
+
       selection.each(function(d){
-        var target = selectedTarget;
+        var target = unselectedTarget;
+        var targetClass = unselectedTargetClass;
         if (type == 'edge') {
-          if (! node || (d.inl.id != node.id && d.outl.id != node.id)) {
-            target = unselectedTarget
+          if (node && (d.inl.id == node.id || d.outl.id == node.id)) {
+            target = selectedTarget;
+            targetClass = selectedTargetClass;
           }
         } else {
-          if (! node || (node.links[d.id] === undefined && d.id != node.id)) {
-            target = unselectedTarget
+          if (node && (node.links[d.id] !== undefined || d.id == node.id)) {
+            target = selectedTarget;
+            targetClass = selectedTargetClass;
           }
-        } 
-        $(this).appendTo(target)
+        }
+        // console.log(targetClass);
+        if (! $(this).parent(targetClass).length) {
+          // console.log(n3.currTime)
+          $(target).append(this);
+        }
       })    
     })    
   }
@@ -734,6 +743,7 @@
   */
   n3.prototype.updateGraph = function(duration) {
     var n3 = this;
+    // console.profile('update '+n3.currTime);
 
     var renderData = n3.updateSliceRenderData(n3.currTime);
     n3.frameInfoDiv.html(n3.currTime+': '+n3.timeIndex[n3.currTime].start + '-'+n3.timeIndex[n3.currTime].end)
@@ -886,8 +896,8 @@
           } else {
             n3.selectedNetwork = null;
           }
+          n3.updateSelectedNetwork()
           n3.container.select('.screen').classed({'network-selected': n3.selectedNetwork})
-          n3.updateSelectedNetwork();
           n3.selected = n3.selectedNetwork;
           n3.moveTooltip();
           d3.event.stopPropagation();
@@ -938,7 +948,7 @@
       if (!enterExitDuration) {labels.attr({opacity: 1}); }
 
       labels.transition().filter(function(d) { return renderData.graph.displaylabels; })
-        .delay(enterExitDuration+200)
+        .delay(enterExitDuration)
         .duration(updateDuration)
         .call(n3.drawNodeLabel, n3)
         //.attr({opacity: 1})
@@ -963,6 +973,7 @@
         }
         return Date.now() >= start +duration; 
       })
+      // console.profileEnd('update '+n3.currTime);
   }
 
   /** resizes graph and other display elements to fill the target viewport */
