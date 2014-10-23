@@ -9,8 +9,9 @@ saveHTML=TRUE
 # delete the various movie files so that they can be overwritten
 unlink('inst/javascript/ndtv-d3/examples/data/shortStergm.mp4')
 unlink('inst/javascript/ndtv-d3/examples/data/msmSim.mp4')
-unlink('inst/javascript/ndtv-d3/examples/data/windsurfers.json')
-unlink('inst/javascript/ndtv-d3/examples/data/mcfarlandClass.json')
+unlink('inst/javascript/ndtv-d3/examples/data/windsurfers.mp4')
+unlink('inst/javascript/ndtv-d3/examples/data/mcfarlandClass.mp4')
+unlink('inst/javascript/ndtv-d3/examples/data/EpiSim.mp4')
 
 # this renders out a version of the 'flo-marriage' short.stergm.sim object
 # added some arbitrary vertex attribute transformations to make it useful
@@ -46,7 +47,7 @@ msm.sim <- compute.animation(msm.sim,slice.par=list(start=0,end=10,interval=1,ag
 render.d3movie(msm.sim,filename='inst/javascript/ndtv-d3/examples/data/msmSim.json',
                vertex.sides=ifelse(msm.sim%v%'race'==1,3,4),  # change shape based on race
                edge.lwd=function(slice){runif(network.edgecount(slice),0.5,5)},# change edge width randomly
-               vertex.cex=function(slice){sapply(1:network.size(slice),function(v){0.1+length(get.edgeIDs(slice,v))/2})}, # change sizes in proportion to number of edges
+               vertex.cex=function(slice){sapply(1:network.size(slice),function(v){0.1+length(get.edgeIDs(slice,v))/4})}, # change sizes in proportion to number of edges
                displaylabels=FALSE,  # don't show labels
                output.mode='JSON'
                )
@@ -54,15 +55,15 @@ if (saveHTML){
   render.d3movie(msm.sim,filename='inst/javascript/ndtv-d3/examples/data/msmSim.html',
                  vertex.sides=ifelse(msm.sim%v%'race'==1,3,4),  # change shape based on race
                  edge.lwd=function(slice){runif(network.edgecount(slice),0.5,5)},# change edge width randomly
-                 vertex.cex=function(slice){sapply(1:network.size(slice),function(v){0.1+length(get.edgeIDs(slice,v))/2})}, # change sizes in proportion to number of edges
+                 vertex.cex=function(slice){sapply(1:network.size(slice),function(v){0.1+length(get.edgeIDs(slice,v))/4})}, # change sizes in proportion to number of edges
                  displaylabels=FALSE,  # don't show labels
-                 output.mode='HTML'
+                 output.mode='HTML')
 }
 if (saveVideo){
 saveVideo(render.animation(msm.sim,
                 vertex.sides=ifelse(msm.sim%v%'race'==1,3,4),  # change shape based on race
                 edge.lwd=function(slice){runif(network.edgecount(slice),0.5,5)},# change edge width randomly
-                vertex.cex=function(slice){sapply(1:network.size(slice),function(v){0.1+length(get.edgeIDs(slice,v))/2})}, # change sizes in proportion to number of edges
+                vertex.cex=function(slice){sapply(1:network.size(slice),function(v){0.1+length(get.edgeIDs(slice,v))/4})}, # change sizes in proportion to number of edges
                 vertex.col='gray',
                 displaylabels=FALSE,  # don't show labels
                 render.cache = 'none'),
@@ -146,6 +147,27 @@ render.d3movie(short.stergm.sim,
 }
 
 # example including html classes
+test<-network.initialize(5)
+test[,]<-1
+activate.vertex.attribute(test,'vertex.css.class','myVertex1',onset=0,terminus=1)
+activate.vertex.attribute(test,'vertex.css.class','myVertex2',onset=1,terminus=2)
+activate.vertex.attribute(test,'vertex.label.css.class','myLabel1',onset=0,terminus=1)
+activate.vertex.attribute(test,'vertex.label.css.class','myLabel2',onset=1,terminus=2)
+activate.vertex.attribute(test,'edge.css.class','myEdge1',onset=0,terminus=1)
+activate.vertex.attribute(test,'edge.css.class','myEdge2',onset=1,terminus=2)
+render.d3movie(test,
+               vertex.css.class=function(slice){slice%v%'vertex.css.class'},
+               edge.css.class=function(slice){slice%e%'edge.css.class'},
+               vertex.label.css.class=function(slice){slice%v%'vertex.label.css.class'},
+               filename='cssClassTest.html')
+if(saveHTML){
+render.d3movie(test,
+                 vertex.css.class=function(slice){slice%v%'vertex.css.class'},
+                 edge.css.class=function(slice){slice%e%'edge.css.class'},
+                 vertex.label.css.class=function(slice){slice%v%'vertex.label.css.class'},
+               filename='cssClassTest.json',output.mode='JSON')
+}
+
 
 
 # epimodel example
@@ -170,8 +192,6 @@ init <- init.net(i.num = 5)
 control <- control.net(type = "SI", nsteps = 25, nsims = 1, verbose =
                          FALSE)
 sim <- netsim(est, param, init, control)
-
-
 ## Movies
 nw.sim <- get_network(sim)
 nw.sim <- color_tea(nw.sim)
@@ -192,8 +212,9 @@ render.d3movie(
   edge.col = "darkgrey",
   vertex.border = "lightgrey",
   displaylabels = FALSE,
-  vertex.tooltip = paste('name:',slice%v%'vertex.names','<br>','status:', slice%v%'testatus'),
+  vertex.tooltip = function(slice){paste('name:',slice%v%'vertex.names','<br>','status:', slice%v%'testatus')},
   filename='inst/javascript/ndtv-d3/examples/data/EpiSim.json',output.mode='JSON')
+
 
 if (saveHTML){
 render.d3movie(
@@ -205,7 +226,7 @@ render.d3movie(
   edge.col = "darkgrey",
   vertex.border = "lightgrey",
   displaylabels = FALSE,
-  vertex.tooltip = paste('name:',slice%v%'vertex.names','<br>','status:', slice%v%'testatus'),
+  vertex.tooltip = function(slice){paste('name:',slice%v%'vertex.names','<br>','status:', slice%v%'testatus')},
   filename='inst/javascript/ndtv-d3/examples/data/EpiSim.html')
 }
 
