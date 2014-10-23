@@ -647,8 +647,9 @@
   * @private
   */
   n3.prototype.drawPolygonNode = function(selection, n3){
+    // console.profile('polymath')
     selection.attr({
-      d: function(d, i) { 
+      points: function(d, i) { 
         var sides = d['vertex.sides'];
         var size = d['vertex.cex'] * n3.baseNodeSize;
         var coords = d.renderCoord;
@@ -664,11 +665,12 @@
             var ang = i * base + rot;
             var x = centerX + size * Math.cos(ang);
             var y = centerY + size * Math.sin(ang);
-            poly.push([x.toFixed(3), y.toFixed(3)]);
+            poly.push([x.toFixed(3)+','+y.toFixed(3)]);
         }
-        return drawLine()(poly) + 'Z';
+        return poly.join(' ');
       },
     })
+    // console.profileEnd('polymath')
   }
 
   /** creates circle attributes for given node selection
@@ -876,7 +878,7 @@
         'stroke-opacity': function(d) {return d['vertex.border.stroke-opacity']; },
       })
       selection.filter('circle').call(n3.drawCircleNode, n3)
-      selection.filter('path').call(n3.drawPolygonNode, n3)
+      selection.filter('polygon').call(n3.drawPolygonNode, n3)
     }
 
     /** set attributes & transitions to be applied to new nodes
@@ -910,7 +912,7 @@
     var nodes = n3.container.selectAll('.node').data(d3.values(renderData.node), function(e) { return e.id; })
 
       var node_groups = nodes.enter().append('g').classed({'node_group' : true});
-      node_groups.filter(function(d) { return d['vertex.sides'] != 50; }).append('path').call(createNodes);
+      node_groups.filter(function(d) { return d['vertex.sides'] != 50; }).append('polygon').call(createNodes);
       node_groups.filter(function(d) { return d['vertex.sides'] == 50; }).append('circle').call(createNodes);
 
       if (!enterExitDuration) {nodes.attr({opacity: 1}); }
@@ -984,7 +986,7 @@
     n3.container.selectAll('.edge').call(n3.drawEdge, n3, n3.timeIndex[n3.currTime].renderData.graph.usearrows)
 
     n3.container.selectAll('circle.node').call(n3.drawCircleNode, n3)
-    n3.container.selectAll('path.node').call(n3.drawPolygonNode, n3)
+    n3.container.selectAll('polygon.node').call(n3.drawPolygonNode, n3)
 
     n3.container.select('.labels').selectAll('text').call(n3.drawNodeLabel, n3)
 
