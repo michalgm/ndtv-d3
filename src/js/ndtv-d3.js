@@ -164,16 +164,16 @@
     var svg = domTarget.select('svg')
       .append('g')
 
-    var downLocation;
+    var dragEvent;
     var rect = svg.append("rect")
       .attr('class', 'background')
       .style("fill", "none")
       .style("pointer-events", "all")
       .on('mousedown', function() { 
-        downLocation = n3.container.attr('transform');
+        dragEvent = d3.event;
       })
       .on('mouseup', function() { 
-        if (downLocation == n3.container.attr('transform')) {
+        if (Math.abs(dragEvent.pageX - d3.event.pageX) < 5 && Math.abs(dragEvent.pageY - d3.event.pageY) < 5) {
           n3.hideTooltip();
           n3.unSelectNetwork();
         }
@@ -628,7 +628,7 @@
          edgeX = x2;
          edgeY = y2;
        }
-       return 'M '+x1.toFixed(3)+' '+y1.toFixed(3)+' L '+edgeX.toFixed(3)+' '+edgeY.toFixed(3);     
+       return 'M '+x1.toFixed(1)+' '+y1.toFixed(1)+' L '+edgeX.toFixed(1)+' '+edgeY.toFixed(1);     
       },
     })
   }
@@ -665,7 +665,7 @@
             var ang = i * base + rot;
             var x = centerX + size * Math.cos(ang);
             var y = centerY + size * Math.sin(ang);
-            poly.push([x.toFixed(3)+','+y.toFixed(3)]);
+            poly.push([x.toFixed(1)+','+y.toFixed(1)]);
         }
         return poly.join(' ');
       },
@@ -680,9 +680,9 @@
   */
   n3.prototype.drawCircleNode = function(selection, n3){
     selection.attr({
-      cx: function(d, i) { return n3.xScale(d.renderCoord[0]).toFixed(3); },
-      cy: function(d, i) { return n3.yScale(d.renderCoord[1]).toFixed(3); },
-      r: function(d, i) { return (d['vertex.cex'] * n3.baseNodeSize).toFixed(3); },
+      cx: function(d, i) { return n3.xScale(d.renderCoord[0]).toFixed(1); },
+      cy: function(d, i) { return n3.yScale(d.renderCoord[1]).toFixed(1); },
+      r: function(d, i) { return (d['vertex.cex'] * n3.baseNodeSize).toFixed(1); },
     })
   }
 
@@ -693,8 +693,8 @@
   */
   n3.prototype.drawNodeLabel = function(selection, n3){
     selection.attr({
-      x: function(d, i) { return n3.xScale(d.renderCoord[0])+n3.options.labelOffset.x; },
-      y: function(d, i) { return n3.yScale(d.renderCoord[1])+n3.options.labelOffset.y; },
+      x: function(d, i) { return (n3.xScale(d.renderCoord[0])+n3.options.labelOffset.x).toFixed(1); },
+      y: function(d, i) { return (n3.yScale(d.renderCoord[1])+n3.options.labelOffset.y).toFixed(1); },
     })
   }
 
