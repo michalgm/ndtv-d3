@@ -1,4 +1,4 @@
-/*
+/**
 ndtv-d3 is a d3-based HTML5 network animation player for the ndtv package (http://cran.r-project.org/web/packages/ndtv/index.html)
 
 The ndtv-d3 library was created by Greg Michalec and Skye Bender-deMoll for the statnet project http://statnet.org funded by NICHD grant R01HD068395.
@@ -16,8 +16,8 @@ Copyright 2014 Statnet Commons http://statnet.org
 To cite this project, please use:
 
 Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 network animation player for the ndtv package' The statnet project. http://statnet.org
+@module
 */
-
 
 
 (function (root, factory) {
@@ -321,6 +321,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     })
   }
   
+  /** creates the optional menu element to be used for controlling settings and displaying 'about' link */
   n3.prototype.createMenu = function() {
     var n3 = this;
     if (d3.select('#ndtv-svg-menu-icons').empty()) {
@@ -363,7 +364,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
   /** creates the optional play controls div using svg icons and defines the attached events */
   n3.prototype.createPlayControls = function() {
     var n3 = this;
-    
+
     //define SVG icons to be used in the play controller
     if (d3.select('#ndtv-svg-icons').empty()) {
       $('body').prepend(
@@ -751,7 +752,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     })
   }
 
-
+  /** highlights the currently selected network */
   n3.prototype.updateSelectedNetwork = function() {
     var n3 = this;
     var node = n3.selectedNetwork;
@@ -786,6 +787,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     })    
   }
 
+  /** unhighlights the currently selected network */
   n3.prototype.unSelectNetwork = function() {
     var n3 = this;
     n3.selectedNetwork = null;
@@ -1055,8 +1057,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
   /** graph animation controller
   * @param {integer} - render the graph to the state at this timeslice index
   * @param {integer} - function will recursively call itself until time equals this value
-  * @param {milliseconds} - the amount of time the transition animation should take
-  * @param {boolean} - don't update time slider - FIXME - do we really need this?
+  * @param {boolean} - should the graph update immediately, or animate?
   */
   n3.prototype.animateGraph = function(time, endTime, immediate) {
     var n3 = this;
@@ -1113,6 +1114,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     }
   }
 
+  /** get center point of edge or node, in DOM pixels */
   n3.prototype.convertCoords = function(item) {
     var n3 = this;
     var type = item.inl ? 'edge' : 'node';
