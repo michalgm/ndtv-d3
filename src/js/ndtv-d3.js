@@ -1,3 +1,25 @@
+/**
+ndtv-d3 is a d3-based HTML5 network animation player for the ndtv package (http://cran.r-project.org/web/packages/ndtv/index.html)
+
+The ndtv-d3 library was created by Greg Michalec and Skye Bender-deMoll for the statnet project http://statnet.org funded by NICHD grant R01HD068395.
+
+This software is distributed under the GPL-3 license (http://choosealicense.com/licenses/gpl-3.0/).  It is free, open source, and has the attribution requirements (GPL Section 7) at http://statnet.org/attribution:
+
+a. you agree to retain in ndtv-d3 and any modifications to ndtv-d3 the copyright, author attribution and URL information as provided at a http://statnetproject.org/attribution.
+
+b. you agree that ndtv-d3 and any modifications to ndtv-d3 will, when used, display the attribution:
+
+    Based on 'statnet' project software (http://statnetproject.org). For license and citation information see http://statnetproject.org/attribution
+
+Copyright 2014 Statnet Commons http://statnet.org
+
+To cite this project, please use:
+
+Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 network animation player for the ndtv package' The statnet project. http://statnet.org
+@module
+*/
+
+
 (function (root, factory) {
   /** @class */
   root.ndtv_d3 = factory();
@@ -23,6 +45,7 @@
     dataChooserDir: 'data/',      //web path to dir containing data json files
     playControls: true,           //show the player controls
     slider: true,                 //show the slider control
+    menu: true,                   //show a menu in upper-right
     animateOnLoad: false,         //play the graph animation on page load
     margin: {                     //graph render area margins
       x: 20,
@@ -124,21 +147,12 @@
     if (n3.options.dataChooser) { n3.createDataChooser(); }
     if (n3.options.playControls) { n3.createPlayControls(); }
     if (n3.options.slider) { n3.createSliderControl(); }
+    if (n3.options.menu) { n3.createMenu(); }
+
 
     n3.tooltip = n3.domTarget.select('.graph').append('div').attr('class', 'tooltip');
     n3.frameInfoDiv = n3.domTarget.select('.graph').append('div').attr('class', 'frameInfo')
     if (n3.options.debugFrameInfo) { n3.frameInfoDiv.style('display', 'block'); }
-    if (n3.options.debugDurationControl) { 
-      var durationControl = n3.domTarget.select('.graph').insert('div', ':first-child').attr('class', 'durationControlContainer');
-      var durationSlider = d3.slider().min(0).max(8).axis(new d3.svg.axis().ticks(5)).step(1).value(n3.options.animationDuration/1000);
-      durationControl.call(durationSlider)
-      durationSlider.on('slide', function(evt, value){
-        n3.options.animationDuration = value*1000;
-        if(n3.options.slider) {
-          n3.slider.animate(n3.options.animationDuration)
-        }
-      })
-    }
     if(n3.options.graphData) { n3.loadData(n3.options.graphData); }
   }
 
@@ -164,17 +178,18 @@
     var svg = domTarget.select('svg')
       .append('g')
 
-    var downLocation;
+    var dragEvent;
     var rect = svg.append("rect")
       .attr('class', 'background')
       .style("fill", "none")
       .style("pointer-events", "all")
       .on('mousedown', function() { 
-        downLocation = n3.container.attr('transform');
+        dragEvent = d3.event;
       })
       .on('mouseup', function() { 
-        if (downLocation == n3.container.attr('transform')) {
+        if (Math.abs(dragEvent.pageX - d3.event.pageX) < 5 && Math.abs(dragEvent.pageY - d3.event.pageY) < 5) {
           n3.hideTooltip();
+          n3.unSelectNetwork();
         }
       })
 
@@ -183,6 +198,11 @@
     n3.container.append('g').attr('class', 'edges');
     n3.container.append('g').attr('class', 'nodes');
     n3.container.append('g').attr('class', 'labels');
+    n3.container.append('rect').attr('class', 'screen');
+    n3.container.append('g').attr('class', 'edges_selected');
+    n3.container.append('g').attr('class', 'nodes_selected');
+    n3.container.append('g').attr('class', 'labels_selected');
+
     svg.append('g').attr('class', 'main').append('text');
     svg.append('g').attr('class', 'xlab').append('text');
 
@@ -236,7 +256,7 @@
     var width = div_width - (margin.x*2);
     var height = div_height - (margin.y*2);
 
-    n3.domTarget.selectAll('svg, .background')
+    n3.domTarget.selectAll('svg, .background, .screen')
       .attr({
         width: width + margin.x * 2,
         height: height + margin.y * 2
@@ -301,10 +321,50 @@
     })
   }
   
+  /** creates the optional menu element to be used for controlling settings and displaying 'about' link */
+  n3.prototype.createMenu = function() {
+    var n3 = this;
+    if (d3.select('#ndtv-svg-menu-icons').empty()) {
+      $('body').prepend(
+      '<svg id="ndtv-svg-menu-icons" display="none" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="176" height="32" viewBox="0 0 176 32">'+
+      '  <defs>'+
+      '    <g id="icon-list"><path d="M25.6 14.4h-19.2c-0.883 0-1.6 0.717-1.6 1.6s0.717 1.6 1.6 1.6h19.2c0.885 0 1.6-0.717 1.6-1.6s-0.715-1.6-1.6-1.6zM6.4 11.2h19.2c0.885 0 1.6-0.717 1.6-1.6s-0.715-1.6-1.6-1.6h-19.2c-0.883 0-1.6 0.717-1.6 1.6s0.717 1.6 1.6 1.6zM25.6 20.8h-19.2c-0.883 0-1.6 0.715-1.6 1.6s0.717 1.6 1.6 1.6h19.2c0.885 0 1.6-0.715 1.6-1.6s-0.715-1.6-1.6-1.6z"></path></g>'+
+      '  </defs>'+
+      '</svg>');
+    }
+    var div = n3.domTarget.select('.graph').append('div').attr('class', 'ndtv-menu-container');
+    div.html(
+      "<div class='ndtv-menu-icon'>"+
+      " <svg class='icon menu-control' viewBox='0 0 32 32'><use xlink:href='#icon-list'></use></svg>"+
+      "</div>"+
+      "<div class='ndtv-menu'></div>"
+    )
+    var menu = n3.domTarget.select('.ndtv-menu');
+
+    if (n3.options.debugDurationControl) { 
+      var durationControl = menu.append('div').attr('class', 'menu-item durationControlContainer');
+      durationControl.append('span').attr('class', 'menu-label').html('Animation Duration');
+      var durationSlider = d3.slider().min(0).max(8).axis(new d3.svg.axis().ticks(5)).value(n3.options.animationDuration/1000);
+      durationControl.append('div').attr('class', 'durationControl').call(durationSlider)
+      durationSlider.on('slide', function(evt, value){
+        n3.options.animationDuration = value*1000;
+        if(n3.options.slider) {
+          n3.slider.animate(n3.options.animationDuration)
+        }
+      })
+    }
+
+    menu.append("div").attr('class', 'menu-item').html("<a href='https://github.com/michalgm/ndtv-d3' target='_blank'>About NDTV-D3</a></div>");
+    n3.domTarget.select('.ndtv-menu-icon').on('click', function() {
+      $(menu.node()).fadeToggle(200);
+      $(this).toggleClass('menu-active')
+    })
+  }
+
   /** creates the optional play controls div using svg icons and defines the attached events */
   n3.prototype.createPlayControls = function() {
     var n3 = this;
-    
+
     //define SVG icons to be used in the play controller
     if (d3.select('#ndtv-svg-icons').empty()) {
       $('body').prepend(
@@ -345,7 +405,7 @@
     var n3 = this;
     n3.endAnimation();
     n3.currTime = 0;
-    n3.highlightedNode = null;
+    n3.selectedNetwork = null;
     n3.selected = null;
     
     var processData = function(data) {
@@ -356,7 +416,7 @@
         $(n3.domTarget.select('.data_chooser').node()).val(graphData);
         n3.domTarget.select('.video_link').attr('href', graphData.replace('.json', '.mp4'))
       }
-      n3.container.selectAll('.edges, .labels, .nodes').selectAll('*').remove();
+      n3.container.selectAll('.edge, .label, .node').remove();
 
       n3.nodeCoords = {};
 
@@ -622,7 +682,7 @@
          edgeX = x2;
          edgeY = y2;
        }
-       return 'M '+x1+' '+y1+' L '+edgeX+' '+edgeY;     
+       return 'M '+x1.toFixed(1)+' '+y1.toFixed(1)+' L '+edgeX.toFixed(1)+' '+edgeY.toFixed(1);     
       },
     })
   }
@@ -641,8 +701,9 @@
   * @private
   */
   n3.prototype.drawPolygonNode = function(selection, n3){
+    // console.profile('polymath')
     selection.attr({
-      d: function(d, i) { 
+      points: function(d, i) { 
         var sides = d['vertex.sides'];
         var size = d['vertex.cex'] * n3.baseNodeSize;
         var coords = d.renderCoord;
@@ -658,11 +719,12 @@
             var ang = i * base + rot;
             var x = centerX + size * Math.cos(ang);
             var y = centerY + size * Math.sin(ang);
-            poly.push([x, y]);
+            poly.push([x.toFixed(1)+','+y.toFixed(1)]);
         }
-        return drawLine()(poly) + 'Z';
+        return poly.join(' ');
       },
     })
+    // console.profileEnd('polymath')
   }
 
   /** creates circle attributes for given node selection
@@ -672,9 +734,9 @@
   */
   n3.prototype.drawCircleNode = function(selection, n3){
     selection.attr({
-      cx: function(d, i) { return n3.xScale(d.renderCoord[0]); },
-      cy: function(d, i) { return n3.yScale(d.renderCoord[1]); },
-      r: function(d, i) { return d['vertex.cex'] * n3.baseNodeSize; },
+      cx: function(d, i) { return n3.xScale(d.renderCoord[0]).toFixed(1); },
+      cy: function(d, i) { return n3.yScale(d.renderCoord[1]).toFixed(1); },
+      r: function(d, i) { return (d['vertex.cex'] * n3.baseNodeSize).toFixed(1); },
     })
   }
 
@@ -685,9 +747,52 @@
   */
   n3.prototype.drawNodeLabel = function(selection, n3){
     selection.attr({
-      x: function(d, i) { return n3.xScale(d.renderCoord[0])+n3.options.labelOffset.x; },
-      y: function(d, i) { return n3.yScale(d.renderCoord[1])+n3.options.labelOffset.y; },
+      x: function(d, i) { return (n3.xScale(d.renderCoord[0])+n3.options.labelOffset.x).toFixed(1); },
+      y: function(d, i) { return (n3.yScale(d.renderCoord[1])+n3.options.labelOffset.y).toFixed(1); },
     })
+  }
+
+  /** highlights the currently selected network */
+  n3.prototype.updateSelectedNetwork = function() {
+    var n3 = this;
+    var node = n3.selectedNetwork;
+    $.each(['node_group', 'edge', 'label'], function(i, classname) {
+      var selection = n3.container.selectAll('.'+classname)
+      var type = classname == 'node_group' ? 'node' : classname;
+      var unselectedTargetClass = '.'+type+'s';
+      var selectedTargetClass = '.'+type+'s_selected';
+      var unselectedTarget = n3.container.select(unselectedTargetClass).node();
+      var selectedTarget = n3.container.select(selectedTargetClass).node();
+
+      selection.each(function(d){
+        var target = unselectedTarget;
+        var targetClass = unselectedTargetClass;
+        if (type == 'edge') {
+          if (node && (d.inl.id == node.id || d.outl.id == node.id)) {
+            target = selectedTarget;
+            targetClass = selectedTargetClass;
+          }
+        } else {
+          if (node && (node.links[d.id] !== undefined || d.id == node.id)) {
+            target = selectedTarget;
+            targetClass = selectedTargetClass;
+          }
+        }
+        // console.log(targetClass);
+        if (! $(this).parent(targetClass).length) {
+          // console.log(n3.currTime)
+          $(target).append(this);
+        }
+      })    
+    })    
+  }
+
+  /** unhighlights the currently selected network */
+  n3.prototype.unSelectNetwork = function() {
+    var n3 = this;
+    n3.selectedNetwork = null;
+    n3.container.select('.screen').classed({'network-selected': false});
+    n3.updateSelectedNetwork();
   }
 
   /** render the graph to reflect the state at currTime, transitioning elements over a given duration
@@ -695,6 +800,7 @@
   */
   n3.prototype.updateGraph = function(duration) {
     var n3 = this;
+    // console.profile('update '+n3.currTime);
 
     var renderData = n3.updateSliceRenderData(n3.currTime);
     n3.frameInfoDiv.html(n3.currTime+': '+n3.timeIndex[n3.currTime].start + '-'+n3.timeIndex[n3.currTime].end)
@@ -717,7 +823,7 @@
       }
     });
 
-    n3.domTarget.select('.background').transition()
+    n3.domTarget.selectAll('.background, .screen').transition()
       .style({fill: renderData.graph['bg'], 'fill-opacity': renderData.graph['bg.fill-opacity']});
 
     var showInfo = function(d) {
@@ -729,23 +835,6 @@
       }
     }
 
-    var highlightNode = function(selection, type) {
-      var node = n3.highlightedNode;
-      if (node) {
-        if (type == 'node') { 
-          selection.attr({
-            opacity: function(d) { return node.links[d.id] === undefined && d.id != node.id ? 0.2 : 1; }
-          });
-        } else {
-          selection.attr({
-            opacity: function(d) { return d.inl.id != node.id && d.outl.id != node.id ? 0.2 : 1; }
-          });
-        }
-      } else {
-        selection.attr({opacity: 1});
-      }
-    }
-
     //update selected item
     if (n3.selected) {
       n3.selected = n3.selected.inl ? renderData.edge[n3.selected.id] : renderData.node[n3.selected.id];
@@ -753,8 +842,8 @@
         n3.hideTooltip();
       } 
     }
-    if (n3.highlightedNode) {
-      n3.highlightedNode = renderData.node[n3.highlightedNode.id];
+    if (n3.selectedNetwork) {
+      n3.selectedNetwork = renderData.node[n3.selectedNetwork.id];
     }
 
     if (renderData.graph.usearrows) {
@@ -795,7 +884,7 @@
           .remove()
     }
 
-    var lines = n3.container.select('.edges').selectAll('.edge').data(d3.values(renderData.edge), function(e) { return e.id})
+    var lines = n3.container.selectAll('.edge').data(d3.values(renderData.edge), function(e) { return e.id})
       lines.enter().append('path')
         .attr({
           class: function(d) { return 'edge edge_'+d.id+' '+(d['edge.css.class'] || ''); },     
@@ -810,12 +899,10 @@
         .on('click', showInfo)
         .transition()
         .duration(enterExitDuration)
-        .call(highlightNode, 'edge')
+        .attr({opacity: 1})
 
-      lines.filter('.edge').transition()
-        .duration(enterExitDuration)
-        .call(highlightNode, 'edge')
-
+      if (!enterExitDuration) {lines.attr({opacity: 1}); }
+      
       lines.transition()
         .delay(enterExitDuration)
         .duration(updateDuration)
@@ -825,6 +912,7 @@
           'stroke-width': function(d) { return d['edge.lwd']; },
         })
         .call(n3.drawEdge, n3, renderData.graph.usearrows)
+        .attr({opacity: 1})
 
       lines.exit()
         .style('stroke', 'red')
@@ -845,7 +933,7 @@
         'stroke-opacity': function(d) {return d['vertex.border.stroke-opacity']; },
       })
       selection.filter('circle').call(n3.drawCircleNode, n3)
-      selection.filter('path').call(n3.drawPolygonNode, n3)
+      selection.filter('polygon').call(n3.drawPolygonNode, n3)
     }
 
     /** set attributes & transitions to be applied to new nodes
@@ -860,34 +948,34 @@
         .call(styleNodes)
         .on('click', showInfo)
         .on('dblclick', function(d) {
-          if (! n3.highlightedNode || d.id != n3.highlightedNode.id) {
-            n3.highlightedNode = d;
+          if (! n3.selectedNetwork || d.id != n3.selectedNetwork.id) {
+            n3.selectedNetwork = d;
           } else {
-            n3.highlightedNode = null;
+            n3.selectedNetwork = null;
           }
-          n3.container.selectAll('.node, .label').call(highlightNode, 'node');
-          n3.container.selectAll('.edge').call(highlightNode, 'edge')
-          n3.selected = n3.highlightedNode;
+          n3.updateSelectedNetwork()
+          n3.container.select('.screen').classed({'network-selected': n3.selectedNetwork})
+          n3.selected = n3.selectedNetwork;
           n3.moveTooltip();
           d3.event.stopPropagation();
         })
         .transition()
         .duration(enterExitDuration)
-        .call(highlightNode, 'node')
+        .attr('opacity', 1)
     }
 
-    var nodes = n3.container.select('.nodes').selectAll('.node').data(d3.values(renderData.node), function(e) { return e.id; })
-      var node_groups = nodes.enter().append('g');
-      node_groups.filter(function(d) { return d['vertex.sides'] != 50; }).append('path').call(createNodes);
+    var nodes = n3.container.selectAll('.node').data(d3.values(renderData.node), function(e) { return e.id; })
+
+      var node_groups = nodes.enter().append('g').classed({'node_group' : true});
+      node_groups.filter(function(d) { return d['vertex.sides'] != 50; }).append('polygon').call(createNodes);
       node_groups.filter(function(d) { return d['vertex.sides'] == 50; }).append('circle').call(createNodes);
 
-      nodes.filter('.node').transition()
-        .duration(enterExitDuration)
-        .call(highlightNode, 'node')
+      if (!enterExitDuration) {nodes.attr({opacity: 1}); }
 
       nodes.filter('.node').transition()
         .delay(enterExitDuration)
         .duration(updateDuration)
+        .attr('opacity', 1)
         .call(styleNodes)
 
       nodes.exit()
@@ -896,7 +984,7 @@
         .attr('opacity', 0)
         .remove(); 
 
-    var labels = n3.container.select('.labels').selectAll('text').data(d3.values(renderData.node), function(e) { return e.id});
+    var labels = n3.container.selectAll('text').data(d3.values(renderData.node), function(e) { return e.id});
       labels.enter().append('text').filter(function(d) { return renderData.graph.displaylabels; })
         .attr({
           class: function(d) { return 'label label_'+d.id+ ' '+ (d['vertex.label.css.class'] || ''); },
@@ -910,17 +998,17 @@
           'font-size': function(d) { return n3.options.baseFontSize * d['label.cex'];}
         })
         .transition()
+        .delay(0)
         .duration(enterExitDuration)
-        .call(highlightNode, 'node')
+        .attr({opacity: 1})
 
-      labels.filter('.label').transition()
-        .duration(enterExitDuration)
-        .call(highlightNode, 'node')
+      if (!enterExitDuration) {labels.attr({opacity: 1}); }
 
       labels.transition().filter(function(d) { return renderData.graph.displaylabels; })
         .delay(enterExitDuration)
         .duration(updateDuration)
         .call(n3.drawNodeLabel, n3)
+        //.attr({opacity: 1})
         .text(function(d, i) { return d.label; })
         .style({
           'fill': function(d) {return d['label.col']; },
@@ -932,6 +1020,8 @@
         .duration(enterExitDuration)
         .attr('opacity', 0)
         .remove();
+
+      n3.updateSelectedNetwork();
   
       var start = Date.now();
       d3.timer(function() {
@@ -940,6 +1030,7 @@
         }
         return Date.now() >= start +duration; 
       })
+      // console.profileEnd('update '+n3.currTime);
   }
 
   /** resizes graph and other display elements to fill the target viewport */
@@ -950,7 +1041,7 @@
     n3.container.selectAll('.edge').call(n3.drawEdge, n3, n3.timeIndex[n3.currTime].renderData.graph.usearrows)
 
     n3.container.selectAll('circle.node').call(n3.drawCircleNode, n3)
-    n3.container.selectAll('path.node').call(n3.drawPolygonNode, n3)
+    n3.container.selectAll('polygon.node').call(n3.drawPolygonNode, n3)
 
     n3.container.select('.labels').selectAll('text').call(n3.drawNodeLabel, n3)
 
@@ -966,8 +1057,7 @@
   /** graph animation controller
   * @param {integer} - render the graph to the state at this timeslice index
   * @param {integer} - function will recursively call itself until time equals this value
-  * @param {milliseconds} - the amount of time the transition animation should take
-  * @param {boolean} - don't update time slider - FIXME - do we really need this?
+  * @param {boolean} - should the graph update immediately, or animate?
   */
   n3.prototype.animateGraph = function(time, endTime, immediate) {
     var n3 = this;
@@ -1024,6 +1114,7 @@
     }
   }
 
+  /** get center point of edge or node, in DOM pixels */
   n3.prototype.convertCoords = function(item) {
     var n3 = this;
     var type = item.inl ? 'edge' : 'node';
