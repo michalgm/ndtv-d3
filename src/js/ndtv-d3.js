@@ -53,7 +53,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     },
     graphData: null,              //graph data, either as JSON object or URL to json file
     debugFrameInfo: false,        //Show the slice info in corner
-    debugDurationControl: false,  //Show a control to change duration speed
+    durationControl: true,  //Show a control to change duration speed
   };
 
   /**
@@ -341,7 +341,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     )
     var menu = n3.domTarget.select('.ndtv-menu');
 
-    if (n3.options.debugDurationControl) { 
+    if (n3.options.durationControl) { 
       var durationControl = menu.append('div').attr('class', 'menu-item durationControlContainer');
       durationControl.append('span').attr('class', 'menu-label').html('Animation Duration');
       var durationSlider = d3.slider().min(0).max(8).axis(new d3.svg.axis().ticks(5)).value(n3.options.animationDuration/1000);
