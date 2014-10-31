@@ -45,6 +45,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     dataChooserDir: 'data/',      //web path to dir containing data json files
     playControls: true,           //show the player controls
     slider: true,                 //show the slider control
+    menu: true,                   //show a menu in upper-right
     animateOnLoad: false,         //play the graph animation on page load
     margin: {                     //graph render area margins
       x: 20,
@@ -146,21 +147,12 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     if (n3.options.dataChooser) { n3.createDataChooser(); }
     if (n3.options.playControls) { n3.createPlayControls(); }
     if (n3.options.slider) { n3.createSliderControl(); }
+    if (n3.options.menu) { n3.createMenu(); }
+
 
     n3.tooltip = n3.domTarget.select('.graph').append('div').attr('class', 'tooltip');
     n3.frameInfoDiv = n3.domTarget.select('.graph').append('div').attr('class', 'frameInfo')
     if (n3.options.debugFrameInfo) { n3.frameInfoDiv.style('display', 'block'); }
-    if (n3.options.debugDurationControl) { 
-      var durationControl = n3.domTarget.select('.graph').insert('div', ':first-child').attr('class', 'durationControlContainer');
-      var durationSlider = d3.slider().min(0).max(8).axis(new d3.svg.axis().ticks(5)).value(n3.options.animationDuration/1000);
-      durationControl.call(durationSlider)
-      durationSlider.on('slide', function(evt, value){
-        n3.options.animationDuration = value*1000;
-        if(n3.options.slider) {
-          n3.slider.animate(n3.options.animationDuration)
-        }
-      })
-    }
     if(n3.options.graphData) { n3.loadData(n3.options.graphData); }
   }
 
@@ -329,6 +321,45 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     })
   }
   
+  n3.prototype.createMenu = function() {
+    var n3 = this;
+    if (d3.select('#ndtv-svg-menu-icons').empty()) {
+      $('body').prepend(
+      '<svg id="ndtv-svg-menu-icons" display="none" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="176" height="32" viewBox="0 0 176 32">'+
+      '  <defs>'+
+      '    <g id="icon-list"><path d="M25.6 14.4h-19.2c-0.883 0-1.6 0.717-1.6 1.6s0.717 1.6 1.6 1.6h19.2c0.885 0 1.6-0.717 1.6-1.6s-0.715-1.6-1.6-1.6zM6.4 11.2h19.2c0.885 0 1.6-0.717 1.6-1.6s-0.715-1.6-1.6-1.6h-19.2c-0.883 0-1.6 0.717-1.6 1.6s0.717 1.6 1.6 1.6zM25.6 20.8h-19.2c-0.883 0-1.6 0.715-1.6 1.6s0.717 1.6 1.6 1.6h19.2c0.885 0 1.6-0.715 1.6-1.6s-0.715-1.6-1.6-1.6z"></path></g>'+
+      '  </defs>'+
+      '</svg>');
+    }
+    var div = n3.domTarget.select('.graph').append('div').attr('class', 'ndtv-menu-container');
+    div.html(
+      "<div class='ndtv-menu-icon'>"+
+      " <svg class='icon menu-control' viewBox='0 0 32 32'><use xlink:href='#icon-list'></use></svg>"+
+      "</div>"+
+      "<div class='ndtv-menu'></div>"
+    )
+    var menu = n3.domTarget.select('.ndtv-menu');
+
+    if (n3.options.debugDurationControl) { 
+      var durationControl = menu.append('div').attr('class', 'menu-item durationControlContainer');
+      durationControl.append('span').attr('class', 'menu-label').html('Animation Duration');
+      var durationSlider = d3.slider().min(0).max(8).axis(new d3.svg.axis().ticks(5)).value(n3.options.animationDuration/1000);
+      durationControl.append('div').attr('class', 'durationControl').call(durationSlider)
+      durationSlider.on('slide', function(evt, value){
+        n3.options.animationDuration = value*1000;
+        if(n3.options.slider) {
+          n3.slider.animate(n3.options.animationDuration)
+        }
+      })
+    }
+
+    menu.append("div").attr('class', 'menu-item').html("<a href='https://github.com/michalgm/ndtv-d3' target='_blank'>About NDTV-D3</a></div>");
+    n3.domTarget.select('.ndtv-menu-icon').on('click', function() {
+      $(menu.node()).fadeToggle(200);
+      $(this).toggleClass('menu-active')
+    })
+  }
+
   /** creates the optional play controls div using svg icons and defines the attached events */
   n3.prototype.createPlayControls = function() {
     var n3 = this;
