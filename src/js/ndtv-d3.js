@@ -53,7 +53,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     },
     graphData: null,              //graph data, either as JSON object or URL to json file
     debugFrameInfo: false,        //Show the slice info in corner
-    debugDurationControl: false,  //Show a control to change duration speed
+    durationControl: true,  //Show a control to change duration speed
   };
 
   /**
@@ -341,7 +341,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     )
     var menu = n3.domTarget.select('.ndtv-menu');
 
-    if (n3.options.debugDurationControl) { 
+    if (n3.options.durationControl) { 
       var durationControl = menu.append('div').attr('class', 'menu-item durationControlContainer');
       durationControl.append('span').attr('class', 'menu-label').html('Animation Duration');
       var durationSlider = d3.slider().min(0).max(8).axis(new d3.svg.axis().ticks(5)).value(n3.options.animationDuration/1000);
@@ -354,7 +354,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
       })
     }
 
-    menu.append("div").attr('class', 'menu-item').html("<a href='https://github.com/michalgm/ndtv-d3' target='_blank'>About NDTV-D3</a></div>");
+    menu.append("div").attr('class', 'menu-item').html("<a href='https://github.com/michalgm/ndtv-d3/blob/master/README.md' target='_blank'>About NDTV-D3</a></div>");
     n3.domTarget.select('.ndtv-menu-icon').on('click', function() {
       $(menu.node()).fadeToggle(200);
       $(this).toggleClass('menu-active')
