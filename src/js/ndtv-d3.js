@@ -353,7 +353,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
       })
     }
 
-    menu.append("div").attr('class', 'menu-item').html("<a href='https://github.com/michalgm/ndtv-d3' target='_blank'>About NDTV-D3</a></div>");
+    menu.append("div").attr('class', 'menu-item').html("<a href='https://github.com/michalgm/ndtv-d3/blob/master/README.md' target='_blank'>About NDTV-D3</a></div>");
     n3.domTarget.select('.ndtv-menu-icon').on('click', function() {
       $(menu.node()).fadeToggle(200);
       $(this).toggleClass('menu-active')
