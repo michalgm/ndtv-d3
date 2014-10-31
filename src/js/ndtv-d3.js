@@ -1134,7 +1134,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
       y = bbox.y + bbox.height/2;
     }
     var left = (x*ctm.a) + ctm.e - n3.offset.left +1;
-    var bottom = n3.height -(y*ctm.d)-ctm.f - n3.offset.top +1;
+    var bottom = n3.height -(y*ctm.d)-ctm.f + n3.offset.top +1;
     return [left, bottom];
   }
 

@@ -193,7 +193,7 @@ animate the graph over all time slices, starting at current slice
 Public options to control visualization functionality
 
 **Type**: `object`  
-**Default**: `{"animationDuration":800,"enterExitAnimationFactor":0,"labelOffset":"","baseFontSize":"14","nodeSizeFactor":0.01,"dataChooser":false,"dataChooserDir":"data/","playControls":true,"slider":true,"menu":true,"animateOnLoad":false,"margin":"","graphData":null,"debugFrameInfo":false,"debugDurationControl":false}`  
+**Default**: `{"animationDuration":800,"enterExitAnimationFactor":0,"labelOffset":"","baseFontSize":"14","nodeSizeFactor":0.01,"dataChooser":false,"dataChooserDir":"data/","playControls":true,"slider":true,"menu":true,"animateOnLoad":false,"margin":"","graphData":null,"debugFrameInfo":false,"durationControl":true}`  
 <a name="ndtvProperties"></a>
 #const: ndtvProperties
 Supported NDTV network properties and their default values
