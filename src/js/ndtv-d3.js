@@ -651,8 +651,8 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
       d: function(d) {
        var type = start ? 'startCoords' : 'coords';
 
-       var startNode = d.inl[type];
-       var endNode = d.outl[type];
+       var startNode = d.outl[type];
+       var endNode = d.inl[type];
 
        var x1 = n3.xScale(startNode.coord[0]);
        var y1 = n3.yScale(startNode.coord[1]);
