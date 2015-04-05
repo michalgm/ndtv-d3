@@ -631,6 +631,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         edge[direction] = {
           id: nodeid,
           coords: coords,
+          prevPoints:prevCoords.points,
           //If the node is newly active, use the current coordinates for the start values
           startCoords: ! prevCoords.active ? coords : prevCoords
         }
@@ -649,40 +650,49 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
   n3.prototype.drawEdge = function(selection, n3, usearrows, start) {
     selection.attr({
       d: function(d) {
-       var type = start ? 'startCoords' : 'coords';
+        var type = start ? 'startCoords' : 'coords';
+        var pointsType = start ? 'points': 'prevPoints'; 
 
-       var startNode = d.outl[type];
-       var endNode = d.inl[type];
+        var startNode = d.outl[type];
+        var endNode = d.inl[type];
+        var x1 = n3.xScale(startNode.coord[0]);
+        var y1 = n3.yScale(startNode.coord[1]);
+        var x2 = n3.xScale(endNode.coord[0]);
+        var y2 = n3.yScale(endNode.coord[1]);
+        var edgeX = x2;
+        var edgeY = y2;
 
-       var x1 = n3.xScale(startNode.coord[0]);
-       var y1 = n3.yScale(startNode.coord[1]);
-       var x2 = n3.xScale(endNode.coord[0]);
-       var y2 = n3.yScale(endNode.coord[1]);
-       if(usearrows) {
-         var radius = endNode.size * n3.baseNodeSize + 2;
+        if(usearrows) {
+          var target = d3.select('polygon.node_'+d.inl.id);
+          var radius = 0;
+          if (! target.empty()) {
+            var points = start && d.inl.prevPoints ? d.inl.prevPoints : n3.nodeCoords[d.inl.id].points;
+            var intersect = findPolygonIntersection(points, [x1, y1], [x2, y2]);
+            x2 = intersect[0];
+            y2 = intersect[1];
+            radius = 2;
+          } else {
+            radius = endNode.size * n3.baseNodeSize + 2;
+          }
+          //Now we need to shorten the line to accomodate arrows
+          
+          // Determine line lengths
+          var xlen = x2 - x1;
+          var ylen = y2 - y1;
 
-         // Determine line lengths
-         var xlen = x2 - x1;
-         var ylen = y2 - y1;
+          // Determine hypotenuse length
+          var hlen = Math.sqrt(Math.pow(xlen,2) + Math.pow(ylen,2));
 
-         // Determine hypotenuse length
-         var hlen = Math.sqrt(Math.pow(xlen,2) + Math.pow(ylen,2));
+          // Determine the ratio between the shortened value and the full hypotenuse.
+          var ratio = (hlen - radius) / hlen;
 
-         // Determine the ratio between they shortened value and the full hypotenuse.
-         var ratio = (hlen - radius) / hlen;
-         var edgeX = x1 + (xlen * ratio);
-         var edgeY = y1 + (ylen * ratio);
-         
-         //If the ratio is invalid, just use the original coordinates
-         if (! $.isNumeric(ratio)) { 
-           edgeX = x2;
-           edgeY = y2;
-         }
-       } else {
-         edgeX = x2;
-         edgeY = y2;
-       }
-       return 'M '+x1.toFixed(1)+' '+y1.toFixed(1)+' L '+edgeX.toFixed(1)+' '+edgeY.toFixed(1);     
+          //If the ratio is invalid, just use the original coordinates
+          if ($.isNumeric(ratio)) { 
+            edgeX = x1 + (xlen * ratio);
+            edgeY = y1 + (ylen * ratio);
+          } 
+        }
+        return 'M '+x1.toFixed(1)+' '+y1.toFixed(1)+' L '+edgeX.toFixed(1)+' '+edgeY.toFixed(1);     
       },
     })
   }
@@ -694,6 +704,41 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
       .x(function(d){return d[0];})
       .y(function(d){return d[1];})
   }
+  
+  /** find the point of intesection of two lines - adapted from http://paulbourke.net/geometry/pointlineplane/ 
+  * @private */
+  var findLineIntersection = function(a, b, c, d) {
+    var denominator = (d[1] - c[1]) * (b[0] - a[0]) - (d[0] - c[0]) * (b[1] - a[1]);
+    
+    var one = ( (d[0] - c[0]) * (a[1] - c[1]) - (d[1] - c[1]) * (a[0] - c[0]) ) / denominator;
+    var two = ( (b[0] - a[0]) * (a[1] - c[1]) - (b[1] - a[1]) * (a[0] - c[0]) ) / denominator;
+    if (one <= 1 && one >= 0 && two <= 1 && two >= 0) {
+      var x = a[0] + one * (b[0] - a[0]);
+      var y = a[1] + one * (b[1] - a[1]); 
+      return [x,y];
+    }
+  }
+
+  /** find the point at which a line intersect a polygon
+  * @private */
+  var findPolygonIntersection = function(points, centerA, centerB) {
+    var intersection = [];
+    for(i = 0; i<points.length-1 && ! intersection.length; i++) {
+      var res = findLineIntersection(points[i], points[i+1], centerA, centerB);
+      if (res) {
+        intersection = res;
+      }
+    }
+    if (! intersection.length) {
+      // d3.select('.container').append('path').attr('d', "M "+centerA[0] + ' '+centerA[1] + ' L '+ centerB[0] + ' '+centerB[1]).style({'stroke': 'red'})
+      // d3.select('.container').append('path').attr('d', "M "+points[points.length-1][0] + ' '+points[points.length-1][1] + ' L '+ points[0][0] + ' '+points[0][1]).style({'stroke': 'red'})
+      intersection = findLineIntersection(points[points.length-1], points[0], centerA, centerB);
+    }
+    if (! intersection) {
+      // return centerB;
+    }
+    return intersection;
+  }
 
   /** creates a polygon-shaped path attribute for given node selection
   * @param {D3selection}
@@ -702,6 +747,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
   */
   n3.prototype.drawPolygonNode = function(selection, n3){
     // console.profile('polymath')
+    // console.log(renderData.n)
     selection.attr({
       points: function(d, i) { 
         var sides = d['vertex.sides'];
@@ -713,15 +759,17 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
 
         var rot = rotation * 2 * Math.PI/360
         var base = 1/sides * 2 * Math.PI;
-        var poly = [];
+        n3.nodeCoords[d.id].prevPoints = n3.nodeCoords[d.id].points || [];
+        n3.nodeCoords[d.id].points = [];
 
         for (var i = 1; i <= sides; i++) {
             var ang = i * base + rot;
             var x = centerX + size * Math.cos(ang);
             var y = centerY + size * Math.sin(ang);
-            poly.push([x.toFixed(1)+','+y.toFixed(1)]);
+            n3.nodeCoords[d.id].points.push([x, y]);
         }
-        return poly.join(' ');
+        // console.log(d)
+        return n3.nodeCoords[d.id].points.map(function(p) { return p[0].toFixed(1)+','+p[1].toFixed(1); }).join(' ');
       },
     })
     // console.profileEnd('polymath')
@@ -846,6 +894,69 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
       n3.selectedNetwork = renderData.node[n3.selectedNetwork.id];
     }
 
+    /** apply styles and atrributes to nodes
+    * @private
+    */
+    var styleNodes = function(selection) {
+      selection.style({
+        'fill': function(d, i) {return d['vertex.col']; },
+        'fill-opacity': function(d, i) {return d['vertex.col.fill-opacity']; },
+        'stroke-width': function(d) {return d['vertex.lwd']; },
+        'stroke': function(d) {return d['vertex.border']; },
+        'stroke-opacity': function(d) {return d['vertex.border.stroke-opacity']; },
+      })
+      selection.filter('circle').call(n3.drawCircleNode, n3)
+      selection.filter('polygon').call(n3.drawPolygonNode, n3)
+    }
+
+    /** set attributes & transitions to be applied to new nodes
+    * @private
+    */
+    var createNodes = function(selection) {
+      selection
+        .attr({
+          class: function(d) { return 'node node_'+d.id+' '+(d['vertex.css.class'] || ''); },
+          opacity: 0,
+        })
+        .call(styleNodes)
+        .on('click', showInfo)
+        .on('dblclick', function(d) {
+          if (! n3.selectedNetwork || d.id != n3.selectedNetwork.id) {
+            n3.selectedNetwork = d;
+          } else {
+            n3.selectedNetwork = null;
+          }
+          n3.updateSelectedNetwork()
+          n3.container.select('.screen').classed({'network-selected': n3.selectedNetwork})
+          n3.selected = n3.selectedNetwork;
+          n3.moveTooltip();
+          d3.event.stopPropagation();
+        })
+        .transition()
+        .duration(enterExitDuration)
+        .attr('opacity', 1)
+    }
+
+    var nodes = n3.container.selectAll('.node').data(d3.values(renderData.node), function(e) { return e.id; })
+
+      var node_groups = nodes.enter().append('g').classed({'node_group' : true});
+      node_groups.filter(function(d) { return d['vertex.sides'] != 50; }).append('polygon').call(createNodes);
+      node_groups.filter(function(d) { return d['vertex.sides'] == 50; }).append('circle').call(createNodes);
+
+      if (!enterExitDuration) {nodes.attr({opacity: 1}); }
+
+      nodes.filter('.node').transition()
+        .delay(enterExitDuration)
+        .duration(updateDuration)
+        .attr('opacity', 1)
+        .call(styleNodes)
+
+      nodes.exit()
+        .transition()
+        .duration(enterExitDuration)
+        .attr('opacity', 0)
+        .remove(); 
+
     if (renderData.graph.usearrows) {
       var markers = n3.domTarget.select('defs').selectAll('.arrowhead').data(d3.values(renderData.edge), function(e) { return e.id})
         markers.enter().append('marker').attr({
@@ -921,69 +1032,6 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         .attr('opacity', 0)          
         .remove();
 
-    /** apply styles and atrributes to nodes
-    * @private
-    */
-    var styleNodes = function(selection) {
-      selection.style({
-        'fill': function(d, i) {return d['vertex.col']; },
-        'fill-opacity': function(d, i) {return d['vertex.col.fill-opacity']; },
-        'stroke-width': function(d) {return d['vertex.lwd']; },
-        'stroke': function(d) {return d['vertex.border']; },
-        'stroke-opacity': function(d) {return d['vertex.border.stroke-opacity']; },
-      })
-      selection.filter('circle').call(n3.drawCircleNode, n3)
-      selection.filter('polygon').call(n3.drawPolygonNode, n3)
-    }
-
-    /** set attributes & transitions to be applied to new nodes
-    * @private
-    */
-    var createNodes = function(selection) {
-      selection
-        .attr({
-          class: function(d) { return 'node node_'+d.id+' '+(d['vertex.css.class'] || ''); },
-          opacity: 0,
-        })
-        .call(styleNodes)
-        .on('click', showInfo)
-        .on('dblclick', function(d) {
-          if (! n3.selectedNetwork || d.id != n3.selectedNetwork.id) {
-            n3.selectedNetwork = d;
-          } else {
-            n3.selectedNetwork = null;
-          }
-          n3.updateSelectedNetwork()
-          n3.container.select('.screen').classed({'network-selected': n3.selectedNetwork})
-          n3.selected = n3.selectedNetwork;
-          n3.moveTooltip();
-          d3.event.stopPropagation();
-        })
-        .transition()
-        .duration(enterExitDuration)
-        .attr('opacity', 1)
-    }
-
-    var nodes = n3.container.selectAll('.node').data(d3.values(renderData.node), function(e) { return e.id; })
-
-      var node_groups = nodes.enter().append('g').classed({'node_group' : true});
-      node_groups.filter(function(d) { return d['vertex.sides'] != 50; }).append('polygon').call(createNodes);
-      node_groups.filter(function(d) { return d['vertex.sides'] == 50; }).append('circle').call(createNodes);
-
-      if (!enterExitDuration) {nodes.attr({opacity: 1}); }
-
-      nodes.filter('.node').transition()
-        .delay(enterExitDuration)
-        .duration(updateDuration)
-        .attr('opacity', 1)
-        .call(styleNodes)
-
-      nodes.exit()
-        .transition()
-        .duration(enterExitDuration)
-        .attr('opacity', 0)
-        .remove(); 
-
     var labels = n3.container.selectAll('text').data(d3.values(renderData.node), function(e) { return e.id});
       labels.enter().append('text').filter(function(d) { return renderData.graph.displaylabels; })
         .attr({
@@ -1038,10 +1086,11 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     var n3 = this;
     n3.updateDimensions();
 
-    n3.container.selectAll('.edge').call(n3.drawEdge, n3, n3.timeIndex[n3.currTime].renderData.graph.usearrows)
 
     n3.container.selectAll('circle.node').call(n3.drawCircleNode, n3)
     n3.container.selectAll('polygon.node').call(n3.drawPolygonNode, n3)
+
+    n3.container.selectAll('.edge').call(n3.drawEdge, n3, n3.timeIndex[n3.currTime].renderData.graph.usearrows)
 
     n3.container.select('.labels').selectAll('text').call(n3.drawNodeLabel, n3)
 
