@@ -427,7 +427,8 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         n3.nodeCoords[n.id] = {
           coord: [0,0],
           active: false,
-          size: 0
+          size: 0,
+          points: []
         }
       })
       $.each(n3.graph.mel, function(i, e) {
@@ -617,7 +618,10 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         n3.nodeCoords[id] = {
           coord: node.renderCoord,
           active: true,
-          size: node['vertex.cex']
+          size: node['vertex.cex'],
+          prevPoints: prevNodeCoords[id].points,
+          //FIXME - this could break if a node is ever centered at 0,0
+          prevCoord: prevNodeCoords[id].coord[0] && prevNodeCoords[id].coord[1] ? prevNodeCoords[id].coord : null
         }
       } else {
         n3.nodeCoords[id].active = false;
@@ -626,14 +630,14 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     $.each(data.edge, function(id, edge){
       $.each(['inl', 'outl'], function(i, direction){
         var nodeid = edge[direction].id;
-        var prevCoords = prevNodeCoords[nodeid];
-        var coords = n3.nodeCoords[nodeid] || prevCoords;
+        var prevCoord = prevNodeCoords[nodeid];
+        var coords = n3.nodeCoords[nodeid] || prevCoord;
         edge[direction] = {
           id: nodeid,
           coords: coords,
-          prevPoints:prevCoords.points,
+          prevPoints:prevCoord.points,
           //If the node is newly active, use the current coordinates for the start values
-          startCoords: ! prevCoords.active ? coords : prevCoords
+          startCoords: ! prevCoord.active ? coords : prevCoord
         }
       })
     })
@@ -663,37 +667,12 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         var edgeY = y2;
 
         if(usearrows) {
-          var target = d3.select('polygon.node_'+d.inl.id);
-          var radius = 0;
-          if (! target.empty()) {
-            var points = start && d.inl.prevPoints ? d.inl.prevPoints : n3.nodeCoords[d.inl.id].points;
-            var intersect = findPolygonIntersection(points, [x1, y1], [x2, y2]);
-            x2 = intersect[0];
-            y2 = intersect[1];
-            radius = 2;
-          } else {
-            radius = endNode.size * n3.baseNodeSize + 2;
-          }
-          //Now we need to shorten the line to accomodate arrows
-          
-          // Determine line lengths
-          var xlen = x2 - x1;
-          var ylen = y2 - y1;
-
-          // Determine hypotenuse length
-          var hlen = Math.sqrt(Math.pow(xlen,2) + Math.pow(ylen,2));
-
-          // Determine the ratio between the shortened value and the full hypotenuse.
-          var ratio = (hlen - radius) / hlen;
-
-          //If the ratio is invalid, just use the original coordinates
-          if ($.isNumeric(ratio)) { 
-            edgeX = x1 + (xlen * ratio);
-            edgeY = y1 + (ylen * ratio);
-          } 
+          var intersection = findNodeIntersection(n3, d.inl.id, [x1, y1], 2, start)
+          edgeX = intersection[0];        
+          edgeY = intersection[1];      
         }
         return 'M '+x1.toFixed(1)+' '+y1.toFixed(1)+' L '+edgeX.toFixed(1)+' '+edgeY.toFixed(1);     
-      },
+      }
     })
   }
 
@@ -705,6 +684,58 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
       .y(function(d){return d[1];})
   }
   
+  /** offset a line between two given points by the specified amount. returns the new target point
+  * @param {point} - the origin point
+  * @param {point} - the target point
+  * @param {number} - the offset amount (as length of line)
+  * @private */
+  var offsetLine = function(pointA, pointB, offset) {
+    var xlen = pointB[0] - pointA[0];
+    var ylen = pointB[1] - pointA[1];
+
+    // Determine hypotenuse length
+    var hlen = Math.sqrt(Math.pow(xlen,2) + Math.pow(ylen,2));
+
+    // Determine the ratio between the shortened value and the full hypotenuse.
+    var ratio = (hlen - offset) / hlen;
+
+    //If the ratio is invalid, just use the original coordinates
+    if ($.isNumeric(ratio)) { 
+      return [
+        pointA[0] + (xlen * ratio),
+        pointA[1] + (ylen * ratio)
+      ];
+    } else {
+      return pointB;
+    }
+  }
+
+  /** find the point at which a line drawn from a point to the center of a node intersects with the nodes border.
+  * returns the coordinate, optionally applying an offset
+  * @param {n3} n3 - the n3 object
+  * @param {id} id - the node id
+  * @param {point} point - the point of origin for the line
+  * @param { number} offset - the offset amount to apply
+  * @param {boolean} usePrev - should we use the current slice coordinates, or those of the previous state?
+  * @private */
+  var findNodeIntersection = function(n3, id, point, offset, usePrev) {
+    offset = offset || 0;
+    var nodeData = n3.nodeCoords[id];
+    var center = usePrev && nodeData.prevCoord ? nodeData.prevCoord.slice() : nodeData.coord.slice();
+    var intersection = [
+      n3.xScale(center[0]),
+      n3.yScale(center[1])
+    ];
+
+    if (nodeData.points) {
+      var points = usePrev && nodeData.prevPoints.length ? nodeData.prevPoints : nodeData.points;
+      intersection = findPolygonIntersection(points, intersection, point);
+    } else {
+      offset += nodeData.size * n3.baseNodeSize;
+    }
+    return offsetLine(point, intersection, offset);
+  }
+ 
   /** find the point of intesection of two lines - adapted from http://paulbourke.net/geometry/pointlineplane/ 
   * @private */
   var findLineIntersection = function(a, b, c, d) {
@@ -723,19 +754,27 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
   * @private */
   var findPolygonIntersection = function(points, centerA, centerB) {
     var intersection = [];
-    for(i = 0; i<points.length-1 && ! intersection.length; i++) {
+    for(i = 0; i<points.length-1; i++) {
       var res = findLineIntersection(points[i], points[i+1], centerA, centerB);
       if (res) {
         intersection = res;
+        break;
       }
     }
     if (! intersection.length) {
-      // d3.select('.container').append('path').attr('d', "M "+centerA[0] + ' '+centerA[1] + ' L '+ centerB[0] + ' '+centerB[1]).style({'stroke': 'red'})
-      // d3.select('.container').append('path').attr('d', "M "+points[points.length-1][0] + ' '+points[points.length-1][1] + ' L '+ points[0][0] + ' '+points[0][1]).style({'stroke': 'red'})
       intersection = findLineIntersection(points[points.length-1], points[0], centerA, centerB);
     }
     if (! intersection) {
-      // return centerB;
+      //debugging code
+      var color = d3.scale.category10().domain(d3.range(0,10))(graph2.currTime);
+      d3.select('.container').append('path').attr('d', "M "+centerA[0] + ' '+centerA[1] + ' L '+ centerB[0] + ' '+centerB[1]).style({'stroke': color})
+      for(i = 0; i<points.length-1; i++) {
+        d3.select('.container').append('path').attr('d', "M "+points[i][0] + ' '+points[i][1] + ' L '+ points[i+1][0] + ' '+points[i+1][1]).style({'stroke': color})
+      }
+      d3.select('.container').append('path').attr('d', "M "+points[points.length-1][0] + ' '+points[points.length-1][1] + ' L '+ points[0][0] + ' '+points[0][1]).style({'stroke': color})
+
+      console.log("unable to find intersection! using target point");
+      // return centerB; //FIXME - this should be enabled for production
     }
     return intersection;
   }
@@ -759,7 +798,6 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
 
         var rot = rotation * 2 * Math.PI/360
         var base = 1/sides * 2 * Math.PI;
-        n3.nodeCoords[d.id].prevPoints = n3.nodeCoords[d.id].points || [];
         n3.nodeCoords[d.id].points = [];
 
         for (var i = 1; i <= sides; i++) {
@@ -768,7 +806,6 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
             var y = centerY + size * Math.sin(ang);
             n3.nodeCoords[d.id].points.push([x, y]);
         }
-        // console.log(d)
         return n3.nodeCoords[d.id].points.map(function(p) { return p[0].toFixed(1)+','+p[1].toFixed(1); }).join(' ');
       },
     })
@@ -1170,17 +1207,28 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     var nodeDOM = n3.container.select('.'+type+'_'+item.id).node();
     var ctm = nodeDOM.getScreenCTM();
     var x, y;
-    //   var size = parseFloat(nodeDOM.getAttribute('r'));
-    //   x = (parseFloat(nodeDOM.getAttribute('cx')) + size) * ctm.a;
-    //   y = (parseFloat(nodeDOM.getAttribute('cy')) - size) * ctm.d;
-    // } else {
     var bbox = nodeDOM.getBBox();
+    var center = {
+      x: bbox.x + bbox.width/2,
+      y: bbox.y + bbox.height/2
+    }
     if (type == 'node') {
-      x = bbox.x + bbox.width;
-      y = bbox.y;
+      if (nodeDOM.tagName == 'polygon') {
+        var points = $('polygon.node_'+item.id).attr('points').split(' ').map(function(p) { 
+          return p.split(',').map(parseFloat);
+        })
+        var point = findPolygonIntersection(points, [bbox.x + bbox.width, bbox.y], [center.x, center.y])
+        x = point[0];
+        y = point[1];
+      } else {
+        var size = parseFloat(nodeDOM.getAttribute('r'));
+        var angle = -Math.PI/4;
+        x = center.x + size * Math.cos(angle);
+        y = center.y + size * Math.sin(angle);
+      }
     } else {
-      x = bbox.x + bbox.width/2;
-      y = bbox.y + bbox.height/2;
+      x = center.x;
+      y = center.y;
     }
     var left = (x*ctm.a) + ctm.e - n3.offset.left - $(window).scrollLeft() +1;
     var bottom = n3.height -(y*ctm.d)-ctm.f + n3.offset.top - $(window).scrollTop() +1;
