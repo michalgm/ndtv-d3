@@ -1077,7 +1077,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         .attr('opacity', 0)          
         .remove();
 
-    var labels = n3.container.selectAll('text').data(d3.values(renderData.node), function(e) { return e.id});
+    var labels = n3.container.select('.labels').selectAll('text').data(d3.values(renderData.node), function(e) { return e.id});
       labels.enter().append('text').filter(function(d) { return renderData.graph.displaylabels; })
         .attr({
           class: function(d) { return 'label label_'+d.id+ ' '+ (d['vertex.label.css.class'] || ''); },
