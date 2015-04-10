@@ -71,8 +71,8 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
       usearrows: true,                // should arrows be drawn on edges?
       xlim: null,                     // range of x values                     
       ylim: null,                     // range of y values  
-      edgeOffset: 6,                  // range of y values  
-      tooltipOffset: 5,               // range of y values  
+      edgeOffset: 0,                  // range of y values  
+      tooltipOffset: 0,               // range of y values  
     }, 
     node: {
       coord: null,                    // coordinates for nodes
@@ -544,17 +544,17 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
             var value = def;
 
             //If the property list has only one value, we apply it to all items
-            if(data[property] && data[property].length == 1) {
+            if(typeof data[property] !== 'undefined' && data[property].length == 1) {
               lookup = 0;
             }
-            if (data[property] && data[property][lookup] !== undefined) {
+            if (typeof data[property] !== 'undefined' && data[property][lookup] !== undefined) {
               value = data[property][lookup];
               if (value && (property == 'main' || property == 'xlab')) {
                 value = value.split('\n');
               } else if (! value && property == 'coord') {
                 console.log('missing coordinates for node '+id+ ' at time '+time+' ('+n3.timeIndex[time].start+'-'+n3.timeIndex[time].end+')');
               }
-            } else if (type == 'graph' && data[property]) { //graph properties get applied directly
+            } else if (type == 'graph' && typeof data[property] !== 'undefined') { //graph properties get applied directly
               value = data[property];
             } else if (property == 'label' && sliceRenderData.graph.displaylabels) {
               value = id;
@@ -670,7 +670,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         var edgeY = y2;
 
         if(usearrows) {
-          var intersection = findNodeIntersection(n3, d.inl.id, [x1, y1], 2+ndtvProperties.graph.edgeOffset, start)
+          var intersection = findNodeIntersection(n3, d.inl.id, [x1, y1], 1.7+ndtvProperties.graph.edgeOffset, start)
           edgeX = intersection[0];        
           edgeY = intersection[1];      
         }
@@ -1004,18 +1004,21 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
 
     if (renderData.graph.usearrows) {
       var markers = n3.domTarget.select('defs').selectAll('.arrowhead').data(d3.values(renderData.edge), function(e) { return e.id})
-        markers.enter().append('marker').attr({
+        var markerContainer = markers.enter().append('marker').attr({
           id: function(d) { return 'arrowhead_'+d.id; },
           class: 'arrowhead',
           viewBox: "0 -2.5 5 5",
-          refX: 3,
+          refX: 3.3,
           refY: 0,
-          markerWidth: 4,
-          markerHeight: 4,
-          markerUnits: "strokeWidth",
           orient: "auto",
         })
-        .append("svg:path")
+        // markerContainer.append("svg:polygon")
+        //   .attr({
+        //     points: "-5,-5 -5,5 5,5 5,-5",
+        //     fill: renderData.graph.bg
+        //   })
+
+        markerContainer.append("svg:path")
           .attr({
             d: "M0,-2.5L5,0L0,2.5",
             fill: 'green'
