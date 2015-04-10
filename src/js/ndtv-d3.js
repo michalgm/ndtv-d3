@@ -71,6 +71,8 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
       usearrows: true,                // should arrows be drawn on edges?
       xlim: null,                     // range of x values                     
       ylim: null,                     // range of y values  
+      edgeOffset: 6,                  // range of y values  
+      tooltipOffset: 5,               // range of y values  
     }, 
     node: {
       coord: null,                    // coordinates for nodes
@@ -217,9 +219,9 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
       .scaleExtent([.5, 10])
       .on("zoom", function zoomed() {
         n3.container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+        n3.ctm = n3.container.node().getScreenCTM();
         n3.moveTooltip();
       })
-
     svg.call(n3.zoom)
   }
 
@@ -289,6 +291,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     //Cache height and offset to use for tooltip movement
     n3.height = n3.domTarget.select('.graph').node().offsetHeight
     n3.offset = $(n3.domTarget.select('.graph').node()).offset();
+    n3.ctm = n3.container.node().getScreenCTM();
   }
   
   /** creates the optional dataChooser element to be used for slecting among multiple JSON files for debugging */
@@ -667,7 +670,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         var edgeY = y2;
 
         if(usearrows) {
-          var intersection = findNodeIntersection(n3, d.inl.id, [x1, y1], 2, start)
+          var intersection = findNodeIntersection(n3, d.inl.id, [x1, y1], 2+ndtvProperties.graph.edgeOffset, start)
           edgeX = intersection[0];        
           edgeY = intersection[1];      
         }
@@ -740,9 +743,13 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
   * @private */
   var findLineIntersection = function(a, b, c, d) {
     var denominator = (d[1] - c[1]) * (b[0] - a[0]) - (d[0] - c[0]) * (b[1] - a[1]);
-    
+    var precision = 100000;
+
     var one = ( (d[0] - c[0]) * (a[1] - c[1]) - (d[1] - c[1]) * (a[0] - c[0]) ) / denominator;
     var two = ( (b[0] - a[0]) * (a[1] - c[1]) - (b[1] - a[1]) * (a[0] - c[0]) ) / denominator;
+    one = Math.round(one * precision) / precision;
+    two = Math.round(two * precision) / precision;
+
     if (one <= 1 && one >= 0 && two <= 1 && two >= 0) {
       var x = a[0] + one * (b[0] - a[0]);
       var y = a[1] + one * (b[1] - a[1]); 
@@ -754,7 +761,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
   * @private */
   var findPolygonIntersection = function(points, centerA, centerB) {
     var intersection = [];
-    for(i = 0; i<points.length-1; i++) {
+    for(var i = 0; i<points.length-1; i++) {
       var res = findLineIntersection(points[i], points[i+1], centerA, centerB);
       if (res) {
         intersection = res;
@@ -765,16 +772,17 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
       intersection = findLineIntersection(points[points.length-1], points[0], centerA, centerB);
     }
     if (! intersection) {
-      //debugging code
-      var color = d3.scale.category10().domain(d3.range(0,10))(graph2.currTime);
-      d3.select('.container').append('path').attr('d', "M "+centerA[0] + ' '+centerA[1] + ' L '+ centerB[0] + ' '+centerB[1]).style({'stroke': color})
-      for(i = 0; i<points.length-1; i++) {
-        d3.select('.container').append('path').attr('d', "M "+points[i][0] + ' '+points[i][1] + ' L '+ points[i+1][0] + ' '+points[i+1][1]).style({'stroke': color})
-      }
-      d3.select('.container').append('path').attr('d', "M "+points[points.length-1][0] + ' '+points[points.length-1][1] + ' L '+ points[0][0] + ' '+points[0][1]).style({'stroke': color})
+      console.log("unable to find intersection! using target point", points, centerA, centerB);
 
-      console.log("unable to find intersection! using target point");
-      // return centerB; //FIXME - this should be enabled for production
+      //debugging code
+      // var color = d3.scale.category10().domain(d3.range(0,10))(graph2.currTime);
+      // d3.select('.container').append('path').attr('d', "M "+centerA[0] + ' '+centerA[1] + ' L '+ centerB[0] + ' '+centerB[1]).style({'stroke': color})
+      // for(i = 0; i<points.length-1; i++) {
+      //   d3.select('.container').append('path').attr('d', "M "+points[i][0] + ' '+points[i][1] + ' L '+ points[i+1][0] + ' '+points[i+1][1]).style({'stroke': color})
+      // }
+      // d3.select('.container').append('path').attr('d', "M "+points[points.length-1][0] + ' '+points[points.length-1][1] + ' L '+ points[0][0] + ' '+points[0][1]).style({'stroke': color})
+      return centerB; //FIXME - this should be enabled for production
+
     }
     return intersection;
   }
@@ -999,17 +1007,17 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         markers.enter().append('marker').attr({
           id: function(d) { return 'arrowhead_'+d.id; },
           class: 'arrowhead',
-          viewBox: "0 -5 10 10",
-          refX: 7,
+          viewBox: "0 -2.5 5 5",
+          refX: 3,
           refY: 0,
-          markerWidth: 6,
-          markerHeight: 6,
+          markerWidth: 4,
+          markerHeight: 4,
           markerUnits: "strokeWidth",
           orient: "auto",
         })
         .append("svg:path")
           .attr({
-            d: "M0,-5L10,0L0,5",
+            d: "M0,-2.5L5,0L0,2.5",
             fill: 'green'
           });
 
@@ -1175,6 +1183,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
 
   /** redraw the info popover //FIXME - needs renamed */
   n3.prototype.moveTooltip = function() {
+    // console.profile('moveTooltip');
     var n3 = this;
     if (n3.selected) {
       var item = n3.selected;
@@ -1198,6 +1207,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     } else {
       n3.hideTooltip();
     }
+    // console.profileEnd('moveTooltip');
   }
 
   /** get center point of edge or node, in DOM pixels */
@@ -1205,7 +1215,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     var n3 = this;
     var type = item.inl ? 'edge' : 'node';
     var nodeDOM = n3.container.select('.'+type+'_'+item.id).node();
-    var ctm = nodeDOM.getScreenCTM();
+    var ctm = n3.ctm;
     var x, y;
     var bbox = nodeDOM.getBBox();
     var center = {
@@ -1230,6 +1240,10 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
       x = center.x;
       y = center.y;
     }
+    // var offsetCoords = offsetLine( [center.x, center.y],[x, y],ndtvProperties.graph.tooltipOffset)
+    // x = offsetCoords[0];
+    // y = offsetCoords[1];
+
     var left = (x*ctm.a) + ctm.e - n3.offset.left - $(window).scrollLeft() +1;
     var bottom = n3.height -(y*ctm.d)-ctm.f + n3.offset.top - $(window).scrollTop() +1;
     return [left, bottom];
