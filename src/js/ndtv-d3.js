@@ -670,7 +670,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         var edgeY = y2;
 
         if(usearrows) {
-          var intersection = findNodeIntersection(n3, d.inl.id, [x1, y1], 1.7+ndtvProperties.graph.edgeOffset, start)
+          var intersection = findNodeIntersection(n3, d.inl.id, [x1, y1], 4+ndtvProperties.graph.edgeOffset, start)
           edgeX = intersection[0];        
           edgeY = intersection[1];      
         }
@@ -1007,20 +1007,19 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         var markerContainer = markers.enter().append('marker').attr({
           id: function(d) { return 'arrowhead_'+d.id; },
           class: 'arrowhead',
-          viewBox: "0 -2.5 5 5",
-          refX: 3.3,
+          viewBox: "0 -1 2 2",
+          refX: 1,
           refY: 0,
+          markerWidth: function(d) { 
+            return 6-2.5*Math.atan(d['edge.lwd']*.6);
+          },
+          markerHeight: function(d) { 
+            return 6-2.5*Math.atan(d['edge.lwd']*.6);
+          },
           orient: "auto",
-        })
-        // markerContainer.append("svg:polygon")
-        //   .attr({
-        //     points: "-5,-5 -5,5 5,5 5,-5",
-        //     fill: renderData.graph.bg
-        //   })
-
-        markerContainer.append("svg:path")
+        }).append("svg:path")
           .attr({
-            d: "M0,-2.5L5,0L0,2.5",
+            d: "M0,-1L2,0L0,1",
             fill: 'green'
           });
 
