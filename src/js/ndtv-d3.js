@@ -89,6 +89,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
       'vertex.label.css.class': null, // css class name applied to node label
       'vertex.css.style': null,       // css inline-style applied to node (UNIMPLIMENTED)
       'vertex.label.css.style': null, // css inline style applied to node label (UNIMPLEMENTED)
+      'image': null,                  // background image for vertex
     },
     edge: {
       'edge.lwd': 1,                  // width of vertex border stroke
@@ -944,7 +945,15 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     */
     var styleNodes = function(selection) {
       selection.style({
-        'fill': function(d, i) {return d['vertex.col']; },
+        // 'fill': function(d, i) {return d['vertex.col']; },
+        fill: function(d) {
+          if (d.image) { 
+            return 'url(#image_'+parseInt(d.id)+')'; 
+          } else {
+            return d['vertex.col'];
+          }
+        },
+
         'fill-opacity': function(d, i) {return d['vertex.col.fill-opacity']; },
         'stroke-width': function(d) {return d['vertex.lwd']; },
         'stroke': function(d) {return d['vertex.border']; },
@@ -962,6 +971,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         .attr({
           class: function(d) { return 'node node_'+d.id+' '+(d['vertex.css.class'] || ''); },
           opacity: 0,
+          // fill: function(d) { return 'url(#image_'+d.id+')'; }
         })
         .call(styleNodes)
         .on('click', showInfo)
@@ -980,7 +990,36 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         .transition()
         .duration(enterExitDuration)
         .attr('opacity', 1)
+
     }
+
+    var images = n3.domTarget.select('defs').selectAll('.node-image').data(d3.values(renderData.node).filter(function(d) { return d.image; }), function(n) { return n.id; })
+      images.enter()
+        .append('pattern').attr({
+        id: function(d) { return 'image_'+d.id; },
+        class: 'node-image',
+        viewBox:"0 0 100 100",
+        // preserveAspectRatio:"none", 
+        // 'patternUnits': 'userSpaceOnUse',
+        width: 10,
+        height:10
+      }).append('image').attr({
+        'xlink:href': function(d) { return d.image; },
+        width: 10,
+        height:10        
+      })
+
+      images.select('image').transition()
+        .delay(enterExitDuration)
+        .duration(updateDuration)
+        .attr({
+          'xlink:href': function(d) { return d.image; }
+        });
+
+      images.exit()
+        .transition()
+        .duration(enterExitDuration)
+        .remove(); 
 
     var nodes = n3.container.selectAll('.node').data(d3.values(renderData.node), function(e) { return e.id; })
 
@@ -1004,7 +1043,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
 
     if (renderData.graph.usearrows) {
       var markers = n3.domTarget.select('defs').selectAll('.arrowhead').data(d3.values(renderData.edge), function(e) { return e.id})
-        var markerContainer = markers.enter().append('marker').attr({
+        markers.enter().append('marker').attr({
           id: function(d) { return 'arrowhead_'+d.id; },
           class: 'arrowhead',
           viewBox: "0 -1 2 2",
