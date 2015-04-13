@@ -671,10 +671,14 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         var edgeY = y2;
 
         if(usearrows) {
-          var intersection = findNodeIntersection(n3, d.inl.id, [x1, y1], 2+ndtvProperties.graph.edgeOffset, start)
+          var intersection = findNodeIntersection(n3, d.inl.id, [x1, y1], (scaleArrowheads(d)*d['edge.lwd']), start)
           edgeX = intersection[0];        
           edgeY = intersection[1];      
         }
+        // if (ndtvProperties.graph.edgeOffset) {
+        //   var pointA = offsetLine([edgeX, edgeY], [x1, x2], ndtvProperties.graph.edgeOffset);
+        //   var pointB = offsetLine([x1, x2], [edgeX, edgeY], ndtvProperties.graph.edgeOffset);
+        // }
         return 'M '+x1.toFixed(1)+' '+y1.toFixed(1)+' L '+edgeX.toFixed(1)+' '+edgeY.toFixed(1);     
       }
     })
@@ -714,6 +718,9 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     }
   }
 
+  var scaleArrowheads = function(d) {
+    return 6-2.5*Math.atan(d['edge.lwd']*.6)
+  }
   /** find the point at which a line drawn from a point to the center of a node intersects with the nodes border.
   * returns the coordinate, optionally applying an offset
   * @param {n3} n3 - the n3 object
@@ -1047,14 +1054,8 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
           id: function(d) { return 'arrowhead_'+d.id; },
           class: 'arrowhead',
           viewBox: "0 -1 2 2",
-          refX: 1,
-          refY: 0,
-          markerWidth: function(d) { 
-            return 6-2.5*Math.atan(d['edge.lwd']*.6);
-          },
-          markerHeight: function(d) { 
-            return 6-2.5*Math.atan(d['edge.lwd']*.6);
-          },
+          markerWidth: scaleArrowheads,
+          markerHeight: scaleArrowheads,
           orient: "auto",
         }).append("svg:path")
           .attr({
