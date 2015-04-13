@@ -670,7 +670,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         var edgeY = y2;
 
         if(usearrows) {
-          var intersection = findNodeIntersection(n3, d.inl.id, [x1, y1], 4+ndtvProperties.graph.edgeOffset, start)
+          var intersection = findNodeIntersection(n3, d.inl.id, [x1, y1], 2+ndtvProperties.graph.edgeOffset, start)
           edgeX = intersection[0];        
           edgeY = intersection[1];      
         }
