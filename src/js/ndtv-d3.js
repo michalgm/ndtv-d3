@@ -663,23 +663,15 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
 
         var startNode = d.outl[type];
         var endNode = d.inl[type];
-        var x1 = n3.xScale(startNode.coord[0]);
-        var y1 = n3.yScale(startNode.coord[1]);
-        var x2 = n3.xScale(endNode.coord[0]);
-        var y2 = n3.yScale(endNode.coord[1]);
-        var edgeX = x2;
-        var edgeY = y2;
+        var startCoords = [n3.xScale(startNode.coord[0]), n3.yScale(startNode.coord[1])];
+        var endCoords = [n3.xScale(endNode.coord[0]), n3.yScale(endNode.coord[1])];
 
-        if(usearrows) {
-          var intersection = findNodeIntersection(n3, d.inl.id, [x1, y1], (scaleArrowheads(d)*d['edge.lwd']), start)
-          edgeX = intersection[0];        
-          edgeY = intersection[1];      
+        if(usearrows || ndtvProperties.graph.edgeOffset) {
+          var arrowOffset = usearrows ? scaleArrowheads(d)*d['edge.lwd'] : 0;
+          startCoords = findNodeIntersection(n3, d.outl.id, endCoords, ndtvProperties.graph.edgeOffset, start)
+          endCoords = findNodeIntersection(n3, d.inl.id, startCoords, arrowOffset+ndtvProperties.graph.edgeOffset, start)
         }
-        // if (ndtvProperties.graph.edgeOffset) {
-        //   var pointA = offsetLine([edgeX, edgeY], [x1, x2], ndtvProperties.graph.edgeOffset);
-        //   var pointB = offsetLine([x1, x2], [edgeX, edgeY], ndtvProperties.graph.edgeOffset);
-        // }
-        return 'M '+x1.toFixed(1)+' '+y1.toFixed(1)+' L '+edgeX.toFixed(1)+' '+edgeY.toFixed(1);     
+        return 'M '+startCoords[0].toFixed(1)+' '+startCoords[1].toFixed(1)+' L '+endCoords[0].toFixed(1)+' '+endCoords[1].toFixed(1);     
       }
     })
   }
