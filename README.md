@@ -1,3 +1,6 @@
+---
+output: html_document
+---
 ndtv-d3 : Interactive HTML5 Network Graph Animation for NDTV-generated graphs using D3
 =======
 
@@ -7,10 +10,17 @@ The ndtv-d3 library was created by Greg Michalec and Skye Bender-deMoll for the 
 
 For a demo, please see http://michalgm.github.io/ndtv-d3
 
-Note: the version of the ndtv package supporting ndtv-d3 has not yet been released to the CRAN repository
+If the ndtv package is install in R, networks can be exported with
+```
+library(ndtv)  
+data(short.stergm.sim)  
+render.d3movie(short.stergm.sim)
+```
+
+For a quick vignette, see http://statnet.csde.washington.edu/workshops/SUNBELT/current/ndtv/ndtv-d3_vignette.html
 
 
-Copyright 2014 Statnet Commons http://statnet.org
+Copyright 2015 Statnet Commons http://statnet.org
 
 To cite this project, please use:
 ```
