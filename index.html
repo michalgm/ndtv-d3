@@ -19,7 +19,7 @@
     <div class="wrapper">
       <header>
         <h1>NDTV-D3</h1>
-        <p>Interactive Network Graph Visualization for NDTV-generate graphs using D3 animation</p>
+        <p>Interactive Network Graph Visualization for NDTV-generate graphsd using D3 animation</p>
 
         <p class="view"><a href="https://github.com/michalgm/ndtv-d3">View the Project on GitHub <small>michalgm/ndtv-d3</small></a></p>
 
@@ -33,21 +33,20 @@
       <section>
         <h3>
 <a name="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages"><span class="octicon octicon-link"></span></a>Let's animate some networks!</h3>
-<p>blah blah blah</p>
+<p>ndtv-d3 is an web-based interactive player app for animations of dynamic networks created with the <a href="http://cran.r-project.org/package=ndtv">ndtv R package</a>. It takes JSON-formatted input files (normally produced by ndtv) describing the node positions, changing network relationships and graphic properties and displays them as a 'movie' illustrating the changes in a network object over time. The 'movie' is a zoomable, interactive SVG object with animation play controls and a scrub-able timeline for navigation. </p>
 
 <h3><a name="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages"><span class="octicon octicon-link"></span></a>Examples</h3>
-<p><b>This is an example</b>
+<p><b>The example below can be displayed in a browser with the following R code:</b>
 <script>
 	$(function() {
     	var graph = new ndtv_d3({graphData: "examples/data/shortStergm.json"}, '#graph1');
 	});
 </script>
-<pre><code>var graph = new ndtv_d3({
-	graphData: "examples/data/shortStergm.json"
-}, '#graph1');</code></pre>
+<pre></pre>
 <div id='graph1' style='height: 500px;'></div>
+See the <a href="http://statnet.csde.washington.edu/workshops/SUNBELT/current/ndtv/ndtv-d3_vignette.html">R vignette</a> for ndtv-d3 for additional details and output options. 
 </p>
-<p><b>This is another example</b>
+<p><b>This is an example of the javascript code for emedding a network on a page</b>
 <script>
 	$(function() {
     	var graph2 = new ndtv_d3({graphData: "examples/data/msmSim.json"}, '#graph2');
@@ -58,6 +57,7 @@
 }, '#graph2');</code></pre>
 
 <div id='graph2' style='height: 500px;'></div>
+Some rough documentation for the library's javascript classes is <a href="https://github.com/statnet/ndtv-d3/blob/master/docs/ndtv-d3.md">here</a>.
 </p>
 
 <!--
