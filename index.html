@@ -19,7 +19,7 @@
     <div class="wrapper">
       <header>
         <h1>NDTV-D3</h1>
-        <p>Interactive Network Graph Visualization for NDTV-generate graphsd using D3 animation</p>
+        <p>Interactive Network Graph Visualization for NDTV-generated graphs using D3 animation</p>
 
         <p class="view"><a href="https://github.com/michalgm/ndtv-d3">View the Project on GitHub <small>michalgm/ndtv-d3</small></a></p>
 
@@ -42,7 +42,11 @@
     	var graph = new ndtv_d3({graphData: "examples/data/shortStergm.json"}, '#graph1');
 	});
 </script>
-<pre></pre>
+<pre>
+	library(ndtv)
+	data(short.stergm.sim)
+	render.d3movie(short.stergm.sim)
+</pre>
 <div id='graph1' style='height: 500px;'></div>
 See the <a href="http://statnet.csde.washington.edu/workshops/SUNBELT/current/ndtv/ndtv-d3_vignette.html">R vignette</a> for ndtv-d3 for additional details and output options. 
 </p>
@@ -57,7 +61,7 @@ See the <a href="http://statnet.csde.washington.edu/workshops/SUNBELT/current/nd
 }, '#graph2');</code></pre>
 
 <div id='graph2' style='height: 500px;'></div>
-Some rough documentation for the library's javascript classes is <a href="https://github.com/statnet/ndtv-d3/blob/master/docs/ndtv-d3.md">here</a>.
+Here is a <a href="https://github.com/statnet/ndtv-d3/blob/master/examples/index.html">template page example</a>. Some rough documentation for the library's javascript classes is <a href="https://github.com/statnet/ndtv-d3/blob/master/docs/ndtv-d3.md">here</a>.
 </p>
 
 <!--
