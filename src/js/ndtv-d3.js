@@ -260,7 +260,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     var width = div_width - (margin.x*2);
     var height = div_height - (margin.y*2);
 
-    n3.domTarget.selectAll('svg, .background, .screen')
+    n3.domTarget.selectAll('.graph>svg, .background, .screen')
       .attr({
         width: width + margin.x * 2,
         height: height + margin.y * 2
@@ -383,18 +383,18 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
     }
     var div = n3.domTarget.select('.controls').append('div').attr('class', 'play-control-container');
     div.html(
-      "<div><svg class='icon step-back-control' viewBox='0 0 32 32'><use xlink:href='#icon-first'></use></svg></div>"+
-      "<div><svg class='icon play-back-control' viewBox='0 0 32 32'><g transform='rotate(180, 16, 16)'><use xlink:href='#icon-play'></use></g></svg></div>"+
-      "<div><svg class='icon pause-control' viewBox='0 0 32 32'><use xlink:href='#icon-pause'></use></svg></div>"+
-      "<div><svg class='icon play-forward-control' viewBox='0 0 32 32'><use xlink:href='#icon-play'></use></svg></div>"+
-      "<div><svg class='icon step-forward-control' viewBox='0 0 32 32'><g transform='rotate(180, 16, 16)'><use xlink:href='#icon-first'></use></g></svg></div>"
+      "<div class='step-back-control'><svg class='icon' width='32' height='32' viewBox='0 0 32 32'><use xlink:href='#icon-first'></use></svg></div>"+
+      "<div class='play-back-control'><svg class='icon' width='32' height='32' viewBox='0 0 32 32'><g transform='rotate(180, 16, 16)'><use xlink:href='#icon-play'></use></g></svg></div>"+
+      "<div class='pause-control'><svg class='icon' width='32' height='32' viewBox='0 0 32 32'><use xlink:href='#icon-pause'></use></svg></div>"+
+      "<div class='play-forward-control'><svg class='icon' width='32' height='32' viewBox='0 0 32 32'><use xlink:href='#icon-play'></use></svg></div>"+
+      "<div class='step-forward-control'><svg class='icon' width='32' height='32' viewBox='0 0 32 32'><g transform='rotate(180, 16, 16)'><use xlink:href='#icon-first'></use></g></svg></div>"
     );
 
-    div.select('.step-back-control').on('click', function() { n3.stepAnimation(1); });
-    div.select('.play-back-control').on('click', function() { n3.playAnimation(1); });
-    div.select('.pause-control').on('click', function() { n3.endAnimation(); });
-    div.select('.play-forward-control').on('click', function() { n3.playAnimation(); });
-    div.select('.step-forward-control').on('click', function() { n3.stepAnimation(); });
+    div.select('.step-back-control','.step-back-control .icon').on('click', function() { n3.stepAnimation(1); });
+    div.select('.play-back-control','.play-back-control .icon').on('click', function() { n3.playAnimation(1); });
+    div.select('.pause-control','.pause-control .icon').on('click', function() { n3.endAnimation(); });
+    div.select('.play-forward-control','.play-forward-control .icon').on('click', function() { n3.playAnimation(); });
+    div.select('.step-forward-control','.step-forward-control .icon').on('click', function() { n3.stepAnimation(); });
   }
   
   /** creates the time slider controls and defines attached events */
