@@ -390,11 +390,11 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
       "<div class='step-forward-control'><svg class='icon' width='32' height='32' viewBox='0 0 32 32'><g transform='rotate(180, 16, 16)'><use xlink:href='#icon-first'></use></g></svg></div>"
     );
 
-    div.select('.step-back-control','.step-back-control .icon').on('click', function() { n3.stepAnimation(1); });
-    div.select('.play-back-control','.play-back-control .icon').on('click', function() { n3.playAnimation(1); });
-    div.select('.pause-control','.pause-control .icon').on('click', function() { n3.endAnimation(); });
-    div.select('.play-forward-control','.play-forward-control .icon').on('click', function() { n3.playAnimation(); });
-    div.select('.step-forward-control','.step-forward-control .icon').on('click', function() { n3.stepAnimation(); });
+    div.select('.step-back-control').on('click', function() { n3.stepAnimation(1); });
+    div.select('.play-back-control').on('click', function() { n3.playAnimation(1); });
+    div.select('.pause-control').on('click', function() { n3.endAnimation(); });
+    div.select('.play-forward-control').on('click', function() { n3.playAnimation(); });
+    div.select('.step-forward-control').on('click', function() { n3.stepAnimation(); });
   }
   
   /** creates the time slider controls and defines attached events */
@@ -470,7 +470,7 @@ Greg Michalec, Skye Bender-deMoll, Martina Morris (2014) 'ndtv-d3: an HTML5 netw
         n3.slider.on('slide', function(ext, value) {
           //Check to see if event originated from slider control or elsewhere
           var event = d3.event;
-          if (event.type == 'drag' || d3.select(event.target).classed('d3-slider')) {
+          if (event.type == 'drag' || d3.select(event.currentTarget).classed('d3-slider')) {
             n3.endAnimation();
             n3.animateGraph(n3.currTime, valIndex[value], true);
           }
